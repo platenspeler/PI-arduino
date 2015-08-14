@@ -11,6 +11,10 @@
 
 #include <Arduino.h>
 
+#ifndef STATISTICS
+#define STATISTICS 1			// if necessary, when 0 will compile without debug or statistics
+#endif
+
 struct livoloCode {
 	unsigned long address;		// Address of received code. [0..2^26-1]
 	boolean groupBit;			// Group bit set or not

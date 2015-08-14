@@ -125,6 +125,7 @@ boolean RemoteTransmitter::isSameCode(unsigned long encodedTelegram, unsigned lo
 }
 
 
+
 /************
 * ActionTransmitter
 ************/
@@ -285,7 +286,7 @@ void ElroTransmitter::sendSignal(byte systemCode, char device, boolean on) {
 unsigned long ElroTransmitter::getTelegram(byte systemCode, char device, boolean on) {
 	byte trits[12];
 
-	device-=65;
+//	device-=65;					lampi does not work with 'A' but uses adresses
 
 	for (byte i=0; i<5; i++) {
 		//trits 0-4 contain address (2^5=32 addresses)

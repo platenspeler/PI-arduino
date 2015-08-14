@@ -116,8 +116,10 @@ void kopouReceiver::interruptHandler() {
 		if ((duration > 500) && (duration < 750)) { 
 			// Sync signal received.. Preparing for decoding
 			receivedCode.period = duration / 5;
+#ifdef STATISTICS
 			receivedCode.minPeriod = duration / 5;
 			receivedCode.maxPeriod = duration / 5;
+#endif
 			receivedBit = 0;
 			receivedCode.address= 0;
 			receivedCode.unit= 0;
@@ -172,14 +174,18 @@ void kopouReceiver::interruptHandler() {
 					RESET_STATE;
 					return;
 				}
+#ifdef STATISTICS
 				if (duration > receivedCode.maxPeriod) receivedCode.maxPeriod = duration;
-			}
+#endif
+				}
 			else {								// second pulse is short -> expect a 1-bit
 				if (receivedBit != 1) { 
 					RESET_STATE;
 					return;
 				}
+#ifdef STATISTICS
 				if (duration < receivedCode.minPeriod) receivedCode.minPeriod = duration;
+#endif
 			}
 			receivedCode.unit = receivedCode.unit *2 + receivedBit;
 		}

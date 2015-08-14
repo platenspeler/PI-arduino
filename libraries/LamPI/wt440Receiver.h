@@ -9,8 +9,18 @@
 
 #include <Arduino.h>
 
+#ifndef STATISTICS
+#define STATISTICS 1			// if necessary, when 0 will compile without debug or statistics
+#endif
+
 struct wt440Code {
-	unsigned int period;		// Detected duration in microseconds of 1T in the received signal
+#ifdef STATISTICS
+	short min1Period;			// Statistics!
+	short max1Period;
+	short min2Period;
+	short max2Period;
+#endif
+	//unsigned int period;		// Detected duration in microseconds of 1T in the received signal
 	byte sync;					// 4 bits 
 	unsigned long address;		// 4 bits Address (house code) of received code. 
 	byte channel;				// 2 bits Channel

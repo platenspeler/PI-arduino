@@ -9,6 +9,10 @@
 
 #include <Arduino.h>
 
+#ifndef STATISTICS
+#define STATISTICS 1			// if necessary, when 0 will compile without debug or statistics
+#endif
+
 /**
 * RemoteTransmitter provides a generic class for simulation of common RF remote controls, like the 'Klik aan Klik uit'-system
 * (http://www.klikaanklikuit.nl/), used to remotely switch lights etc.

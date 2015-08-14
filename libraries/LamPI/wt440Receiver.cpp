@@ -1,13 +1,14 @@
 /*
- * wt440Switch library v1.2.0 (20140128) made by Randy Simons http://randysimons.nl/
+ * wt440Switch library v1.3.0 (20150812), M. Westenberg
+ * Using framework by Randy Simons http://randysimons.nl/
  * See wt440Receiver.h for details.
  *
  * License: GPLv3. See license.txt
  */
 
-#include "wt440Receiver.h"
-
 #define RESET_STATE _state = -1 // Resets state to initial position.
+
+#include "wt440Receiver.h"
 
 /************
 * wt440Receiver
@@ -99,10 +100,10 @@ void wt440Receiver::interruptHandler() {
 	static bool skip;
 
 	// Allow for large error-margin. ElCheapo-hardware :(
-	min1period = 750; // Lower limit for 1 period is 0.3 times measured period; high signals can "linger" a bit sometimes, making low signals quite short.
+	min1period = 800; // Lower limit for 1 period is 0.3 times measured period; high signals can "linger" a bit sometimes, making low signals quite short.
 	max1period = 1500; // Upper limit 
 	min2period = 1500; // Lower limit 
-	max2period = 3000; // Upper limit 
+	max2period = 2300; // Upper limit 
 	
 	// Filter out too short pulses. This method works as a low pass filter.
 	edgeTimeStamp[1] = edgeTimeStamp[2];
@@ -140,7 +141,13 @@ void wt440Receiver::interruptHandler() {
 		if ((duration > 750) && (duration < 1500)){ // =750 µs, minimal time between two edges before decoding starts.
 			// Sync signal, first bit received.. Preparing for decoding
 			// repeats = 0;
-			receivedCode.period = duration  ; 	// 
+#ifdef STATISTICS
+			receivedCode.min1Period = max1period;
+			receivedCode.max1Period = min1period;
+			receivedCode.min2Period = max2period;
+			receivedCode.max2Period = min2period;
+#endif
+			//receivedCode.period = duration  ; 	// 
 			receivedCode.sync = 1;				// First state (this one) is OK
 			receivedCode.address= 0;
 			receivedCode.channel= 0;
@@ -296,27 +303,20 @@ void wt440Receiver::interruptHandler() {
 			return;
 	}
 	_state++;
-	
+
+#ifdef STATISTICS	
+	// Statistics
+	if (duration > max1period) {
+			if (duration < receivedCode.min2Period) receivedCode.min2Period = duration;
+			if (duration > receivedCode.max2Period) receivedCode.max2Period = duration;
+		}
+		else { 
+			if (duration < receivedCode.min1Period) receivedCode.min1Period = duration;
+			if (duration > receivedCode.max1Period) receivedCode.max1Period = duration;
+	}
+#endif	
 	// Message complete
 	if (_state == 72) {
-		//if (debug) {
-			//Serial.print("WT440:: "); 
-			//Serial.print(duration);
-			//Serial.print(", A: ");
-			//Serial.print(receivedCode.address);
-			//Serial.print(", C: ");
-			//Serial.print(receivedCode.channel);
-			//Serial.print(", W: ");
-			//Serial.print(receivedCode.wconst);
-			//Serial.print(", H: ");
-			//Serial.print(receivedCode.humidity);
-			//Serial.print(", T: ");
-			//Serial.print(receivedCode.temperature);
-			//Serial.print(", P: ");
-			//Serial.print(receivedCode.par);
-			//Serial.println(""); 
-			//Serial.flush();
-		//}
 		
 		// a valid signal was found!
 		if (

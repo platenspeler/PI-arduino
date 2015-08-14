@@ -11,6 +11,10 @@
 
 #include <Arduino.h>
 
+#ifndef STATISTICS
+#define STATISTICS 1			// if necessary, when 0 will compile without debug or statistics
+#endif
+
 struct kopouCode {
 	unsigned short period;
 	unsigned short minPeriod;

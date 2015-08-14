@@ -5,13 +5,14 @@
 * Version 1.2 beta; 150811
 * (c) M. Westenberg (mw12554@hotmail.com)
 *
-* Based on work of many:
-* 	Randy Simons (Kaku and InterruptChain) 
+* Based on contributions and work of many:
+* 	Randy Simons (Kaku and InterruptChain)
+*	SPC for Livolo
 * 	and others (Wt440) etc.
 *
 * Connect the receiver to digital pin 2, sender no pin 8.
 */
-#define CODECS 7
+#define STATISTICS 1	// Set statistics ON (default)
 
 // Devices
 #define KAKU    0
@@ -29,6 +30,8 @@
 // Transmitters
 #include <LamPITransmitter.h>
 #include <RemoteTransmitter.h>
+#include <livoloTransmitter.h>
+#include <kopouTransmitter.h>
 
 // Receivers
 #include <wt440Receiver.h>
@@ -45,13 +48,16 @@ int  readCnt;				// Character count in buffer
 char readChar;				// Last character read from tty
 char readLine[64];			// Buffer of characters read
 int msgCnt;
-unsigned long codecs;		// must be at least 32 bits for 32 positions.
+unsigned long codecs;		// must be at least 32 bits for 32 positions. Use long instead of array.
 
 // Create a transmitter using digital pin 8 to transmit,
 // with a period duration of 260ms (default), repeating the transmitted
 // code 2^3=8 times.
+
 NewRemoteTransmitter transmitter(8, 260, 3);
 ActionTransmitter atransmitter(8, 195, 3);
+Livolo livolo(8);
+Kopou kopou(8);
 
 // --------------------------------------------------------------------------------
 //
@@ -77,6 +83,8 @@ void setup() {
   
   // Define the interrupt chain
   // The sequence might be relevant, put short pulse protocols first (Such as Livolo)
+  // By removing a line below, that type of device will not be scanned anymore :-)
+  //
   InterruptChain::addInterruptCallback(0, wt440Receiver::interruptHandler); onCodec(WT440);
   InterruptChain::addInterruptCallback(0, livoloReceiver::interruptHandler); onCodec(LIVOLO);
   InterruptChain::addInterruptCallback(0, NewRemoteReceiver::interruptHandler); onCodec(KAKU);
@@ -135,18 +143,9 @@ void parseCmd(char *readLine)
   char *pch;					// Pointer to character position
   if (readLine[0] != '>') {
 	Serial.println("! Error: cmd starts with \">\" ");
+	return;
   } else { 
 	pch = readLine+1;
-  }
-  
-  // 
-  if (debug >= 1) {
-	Serial.print("!< ");
-	Serial.print(msgCnt);
-	Serial.print(" ");
-	Serial.print(cmd);
-	Serial.print(" ");
-	Serial.print(codec);
   }
   
   pch = strtok (pch, " ,."); cnt = atoi(pch);
@@ -158,12 +157,24 @@ void parseCmd(char *readLine)
 	break;
 	case 1:								// transmit
 		pch = strtok (NULL, " ,."); codec = atoi(pch);
+		// print what we received and are going to do
+		if (debug >= 1) {
+			Serial.print("!< ");
+			Serial.print(msgCnt);
+			Serial.print(" ");
+			Serial.print(cmd);
+			Serial.print(" ");
+			Serial.print(codec);
+		}
 		switch (codec) {
 			case 0:
 				parseKaku(pch);
 			break;
 			case 1:
 				parseAction(pch);
+			break;
+			case 5:
+				parseLivolo(pch);
 			break;
 			default:
 				Serial.println("! ERROR: Unknown codec");
@@ -252,6 +263,7 @@ void parseKaku(char *pch)
   }
 }
 
+
 // --------------------------------------------------------------------------------
 // Do parsing of Action specific command
 // print back to caller the received code
@@ -274,7 +286,31 @@ void parseAction(char *pch)
 	Serial.println(lvl);
 
 	atransmitter.sendSignal(group, unit, lvl);
+}
 
+// --------------------------------------------------------------------------------
+// Do parsing of Livolo specific command
+// print back to caller the received code
+//
+// We do expect a level parameter for compatibility with other transmitters
+//
+void parseLivolo(char *pch)
+{
+	int group;
+	int unit;
+	char level;
+	pch = strtok (NULL, " ,."); group = atoi(pch);
+	pch = strtok (NULL, " ,."); unit = atoi(pch);  
+	pch = strtok (NULL, " ,."); level = atoi(pch);
+	
+	Serial.print("! Livolo :: group: ");
+	Serial.print(group);
+	Serial.print(", unit: ");
+	Serial.print(unit);
+	Serial.print(", lvl: ");
+	Serial.println(level);
+
+	livolo.sendButton(group, unit);
 }
 
 
@@ -346,6 +382,12 @@ void showWt440Code(wt440Code receivedCode) {
 		Serial.print(", Humid: "); Serial.print(receivedCode.humidity);
 		Serial.print(", Temp: "); Serial.print(receivedCode.temperature);
 		Serial.print(", Par: "); Serial.print(receivedCode.par);
+#ifdef STATISTICS
+		Serial.print(", Min1: "); Serial.print(receivedCode.min1Period);
+		Serial.print(", Max1: "); Serial.print(receivedCode.max1Period);
+		Serial.print(", Min2: "); Serial.print(receivedCode.min2Period);
+		Serial.print(", Max2: "); Serial.print(receivedCode.max2Period);
+#endif
 		Serial.println(""); 
 		Serial.flush();
 	}
@@ -393,9 +435,11 @@ void showKopouCode(kopouCode receivedCode) {
 		Serial.print("! Kopou code:: addr: "); Serial.print(receivedCode.address);
 		Serial.print(", Unit: "); Serial.print(receivedCode.unit);
 		Serial.print(", Level: "); Serial.print(receivedCode.level);
+#ifdef STATISTICS
 		Serial.print(", Per: "); Serial.print(receivedCode.period);
 		Serial.print(", Min: "); Serial.print(receivedCode.minPeriod);
 		Serial.print(", Max: "); Serial.print(receivedCode.maxPeriod);
+#endif
 		Serial.println(""); 
 		Serial.flush();
 	}
@@ -459,7 +503,9 @@ void showRemoteCode(unsigned long receivedCode, unsigned int period) {
 		Serial.print(", Addr: "); Serial.print(address);
 		Serial.print(", Unit: "); Serial.print(unit);
 		Serial.print(", Level: "); Serial.print(level);
+#ifdef STATISTICS
 		Serial.print(", Period: "); Serial.print(period);
+#endif
 		Serial.println(""); 
 		Serial.flush();
 	}
