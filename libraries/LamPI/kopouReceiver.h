@@ -10,15 +10,14 @@
 #define kopouReceiver_h
 
 #include <Arduino.h>
-
-#ifndef STATISTICS
-#define STATISTICS 1			// if necessary, when 0 will compile without debug or statistics
-#endif
+#include "LamPI.h"
 
 struct kopouCode {
 	unsigned short period;
+#ifdef STATISTICS
 	unsigned short minPeriod;
 	unsigned short maxPeriod;
+#endif
 	unsigned long address;		// Address of received code. [0..2^26-1]
 	boolean groupBit;			// Group bit set or not
 	unsigned short unit;					// Unit code of received code [0..15]

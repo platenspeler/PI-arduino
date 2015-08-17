@@ -7,42 +7,51 @@
 *
 * Based on contributions and work of many:
 * 	Randy Simons (Kaku and InterruptChain)
-*	SPC for Livolo
+*	Spc for Livolo
+*	SPARCfun for HTU21 code
 * 	and others (Wt440) etc.
 *
-* Connect the receiver to digital pin 2, sender no pin 8.
+* Connect the receiver to digital pin 2, sender to pin 8.
 */
-#define STATISTICS 1	// Set statistics ON (default)
 
-// Devices
+#include "LamPI.h"		// Set statistics ON (default), undefine/comment line in file if no statistics are needed
+
+// Devices Define
 #define KAKU    0
 #define ACTION  1
 #define BLOKKER 2
 #define KAKUOLD 3
 #define ELRO    4
-#define LIVOLO  5 
+#define LIVOLO  5
 #define KOPOU   6
 
-// Sensors
-#define WT440  16
-#define OREGON 17
+// Sensors Define
+#define ONBOARD 0
+#define WT440  1
+#define OREGON 2
 
-// Transmitters
+
+// Transmitters Include
 #include <LamPITransmitter.h>
 #include <RemoteTransmitter.h>
 #include <livoloTransmitter.h>
 #include <kopouTransmitter.h>
 
-// Receivers
+// Receivers include
 #include <wt440Receiver.h>
 #include <kakuReceiver.h>
 #include <livoloReceiver.h>
 #include <kopouReceiver.h>
 #include <RemoteReceiver.h>
 
+// Sensors Include
+#include <Wire.h>
+#include "HTU21D.h"
+
 // Others
 #include <InterruptChain.h>
 
+unsigned long time;			// fill up with millis();
 int debug;
 int  readCnt;				// Character count in buffer
 char readChar;				// Last character read from tty
@@ -59,6 +68,9 @@ ActionTransmitter atransmitter(8, 195, 3);
 Livolo livolo(8);
 Kopou kopou(8);
 
+// Sensors
+HTU21D myHumidity;			// Init Sensor(s)
+
 // --------------------------------------------------------------------------------
 //
 void setup() {
@@ -74,30 +86,37 @@ void setup() {
 
   wt440Receiver::init(-1, 1, showWt440Code);
   NewRemoteReceiver::init(-1, 2, showKakuCode);
+  RemoteReceiver::init(-1, 3, showRemoteCode);
   livoloReceiver::init(-1, 2, showLivoloCode);
   kopouReceiver::init(-1, 2, showKopouCode);
-  RemoteReceiver::init(-1, 3, showRemoteCode);
+
 
   // Change interrupt mode to CHANGE (on flanks)
   InterruptChain::setMode(0, CHANGE);
   
   // Define the interrupt chain
-  // The sequence might be relevant, put short pulse protocols first (Such as Livolo)
+  // The sequence might be relevant, defines the order of execution
+  // Put most easy to understand protocols first
   // By removing a line below, that type of device will not be scanned anymore :-)
   //
   InterruptChain::addInterruptCallback(0, wt440Receiver::interruptHandler); onCodec(WT440);
-  InterruptChain::addInterruptCallback(0, livoloReceiver::interruptHandler); onCodec(LIVOLO);
-  InterruptChain::addInterruptCallback(0, NewRemoteReceiver::interruptHandler); onCodec(KAKU);
-  InterruptChain::addInterruptCallback(0, kopouReceiver::interruptHandler);	onCodec(KOPOU);
   InterruptChain::addInterruptCallback(0, RemoteReceiver::interruptHandler); onCodec(ACTION);
+  InterruptChain::addInterruptCallback(0, NewRemoteReceiver::interruptHandler); onCodec(KAKU);
+  InterruptChain::addInterruptCallback(0, livoloReceiver::interruptHandler); onCodec(LIVOLO);
+  InterruptChain::addInterruptCallback(0, kopouReceiver::interruptHandler);	onCodec(KOPOU);
+  
+  myHumidity.begin();
+  time = millis();
+  myHumidity.readHumidity();			// First read value after starting does not make sense.  
+										// Avoid this value being sent to raspberry daemon
 }
 
 // --------------------------------------------------------------------------------
 //
 void loop() {
   char * pch;
-  InterruptChain::disable(0);					// Set interrupts off  
   
+  InterruptChain::disable(0);					// Set interrupts off  
   while (Serial.available()) {
 	readChar = Serial.read();					// Read the requested byte from serial
 	if (readChar == '\n') {						// If there is a newLine in the input
@@ -117,6 +136,8 @@ void loop() {
 	}
   }//available
   InterruptChain::enable(0);					// Set interrupts on again
+  
+  readSensors();
 }
 
 // ***************************** GENERIC ******************************************
@@ -131,6 +152,36 @@ void offCodec (char codec) {
 void setCodec (char codec, char val) {
   codecs = codecs & ~( 1 << codec );		// NAND, no effect for 0, but for 1 bit makes 0
 }
+
+// ************************* SENSORS PART *****************************************
+
+
+// --------------------------------------------------------------------------------
+// 
+void readSensors() {
+	unsigned long now = millis();
+	if ((now - time) > 61000) {				// 61 seconds, so avoiding collisions with other cron jobs
+		if (debug >= 1) {
+				Serial.println("! readSensors exec");
+		}
+		time = now;
+		float humd = myHumidity.readHumidity();
+		float temp = myHumidity.readTemperature();
+		if (((int)humd == 999) || ((int)humd ==998 )) return;		// Timeout (no sensor) or CRC error
+		Serial.print("< ");
+		Serial.print(msgCnt);
+		Serial.print(" 3 0 ");
+		Serial.print(40);					// Code/Address for a HTU21 and similar
+		Serial.print(" ");
+		Serial.print(0);					// First instance
+		Serial.print(" ");
+		Serial.print(temp,1);
+		Serial.print(" ");
+		Serial.println(humd,1);
+		msgCnt++;
+	}
+}
+
 
 // ************************* TRANSMITTER PART *************************************
 
@@ -365,7 +416,7 @@ void showWt440Code(wt440Code receivedCode) {
 	
 	Serial.print("< ");
 	Serial.print(msgCnt);
-	Serial.print(" 3 0 ");
+	Serial.print(" 3 1 ");
 	Serial.print(receivedCode.address);
 	Serial.print(" ");
 	Serial.print(receivedCode.channel);
@@ -412,6 +463,12 @@ void showLivoloCode(livoloCode receivedCode) {
 		Serial.print("! Livolo:: addr: "); Serial.print(receivedCode.address);
 		Serial.print(", Unit: "); Serial.print(receivedCode.unit);
 		Serial.print(", Level: "); Serial.print(receivedCode.level);
+#ifdef STATISTICS
+		Serial.print(", Min1: "); Serial.print(receivedCode.min1Period);
+		Serial.print(", Max1: "); Serial.print(receivedCode.max1Period);
+		Serial.print(", Min3: "); Serial.print(receivedCode.min3Period);
+		Serial.print(", Max3: "); Serial.print(receivedCode.max3Period);
+#endif
 		Serial.println(""); Serial.flush();
 	}
 	msgCnt++;

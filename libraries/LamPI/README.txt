@@ -9,4 +9,4 @@ Trying to combine the functionality of two libraries:
 At first, we'l concentrate on Kaku Messages.
 If room permits on the Arduino, we'll look at other protocols as well.
 
-Maarten
+Maarten (mw12554 @ hotmail . com )

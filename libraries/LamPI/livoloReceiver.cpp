@@ -28,7 +28,7 @@
 * There are 16 bits address pulses: 140+260 for a 0-bit and 260+140 for 1-bit
 * And there are 8 bits for Device id: 140+260 or 260+140 uSecs
 *
-* Each bit is approx 300 USec long, either 140+140 or 300
+* Each bit is approx 300 USec long, either 140+140 or 280
 * 1 start pulse
 * 16 address pulses
 * 7 cmd pulses
@@ -84,12 +84,11 @@ void livoloReceiver::interruptHandler() {
 	static unsigned int min1Period, max1Period, min3Period, max3Period;
 
 	// Allow for large error-margin. ElCheapo-hardware :(
-	min1Period = 80; // Lower limit for 0 period is 0.3 times measured period; high signals can "linger" a bit sometimes, making low signals quite short.
-	max1Period = 220; // Upper limit 
-	min3Period = 230; // Lower limit for a 1 bit
+	// Be careful, when selecting a too large max3period the receiver will "claim" action messages too.
+	min1Period = 100; // Lower limit for 0 period is 0.3 times measured period; high signals can "linger" a bit sometimes, making low signals quite short.
+	max1Period = 230; // Upper limit 
+	min3Period = 240; // Lower limit for a 1 bit
 	max3Period = 400; // Upper limit
-	
-	
 	
 	// Filter out too short pulses. This method works as a low pass filter.
 	edgeTimeStamp[1] = edgeTimeStamp[2];
@@ -114,7 +113,12 @@ void livoloReceiver::interruptHandler() {
 		// By default 1T is 100µs, but for maximum compatibility go as low as 90µs
 		if ((duration > 440) && (duration < 600)) { //400 is max of a normal pulse, 550 is startpulse
 			// Sync signal received.. Preparing for decoding
-			//repeats = 0;
+#ifdef STATISTICS
+			receivedCode.min1Period = max1Period;
+			receivedCode.max1Period = min1Period;
+			receivedCode.min3Period = max3Period;
+			receivedCode.max3Period = min3Period;
+#endif
 			receivedBit = 0;
 			receivedCode.address= 0;
 			receivedCode.unit= 0;
@@ -169,9 +173,20 @@ void livoloReceiver::interruptHandler() {
 		RESET_STATE;
 		return;
 	}
+ 
+#ifdef STATISTICS
+	if (duration < max1Period) {
+		if (duration < receivedCode.min1Period) receivedCode.min1Period = duration;
+		else if (duration > receivedCode.max1Period) receivedCode.max1Period = duration;
+	}
+	else if (_state >= 0){				// Skip the start pulse of 500!
+		if (duration < receivedCode.min3Period) receivedCode.min3Period = duration;
+		else if (duration > receivedCode.max3Period) receivedCode.max3Period = duration;
+	}
+#endif
 
-   _state++;
-	
+	_state++;
+	   
 	// OK, the complete address should be in
 	if(_state == 46) {
 

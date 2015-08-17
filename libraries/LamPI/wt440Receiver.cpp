@@ -1,6 +1,7 @@
 /*
  * wt440Switch library v1.3.0 (20150812), M. Westenberg
- * Using framework by Randy Simons http://randysimons.nl/
+ * Using parts of framework by Randy Simons http://randysimons.nl/
+ * Also thanks to Jaako for his work on the WT440 protocol.
  * See wt440Receiver.h for details.
  *
  * License: GPLv3. See license.txt
@@ -22,12 +23,12 @@
  * 
  * Protocol Info from: ala-paavola.fi
  *
- * bit 00-03 Leader			// 4 bits; 10 B1100
+ * bit 00-03 Leader			// 4 bits; 12 B1100
  * bit 04-07 Address		// 4 bits;
  * bit 08-09 Channel		// 2 bits;
  * bit 10-12 Constant		// 3 bits; 6 B 110
- * bit 13-20 Humidity		// 8 bits;
- * bit 21-34 Temperature 	// 14 bits; t = ( t - 6400) * 10 / 128
+ * bit 13-20 Humidity		// 7 bits;
+ * bit 21-34 Temperature 	// 15 bits; t = ( t - 6400) * 10 / 128
  * bit 35    Parity			// 1 bits
  *
  * The protocol is an FM encoded message of 36 bits. Therefore, the number of pulses
@@ -242,7 +243,7 @@ void wt440Receiver::interruptHandler() {
 			receivedCode.par ^= 1;
 		}
 	} else
-	// humidity 8 bits
+	// humidity 7 bits
 	if (_state < 40) { 
 		// If constant not equals 6, do not bother
 		if ((duration > max2period) || (receivedCode.wconst != 6)) { 
@@ -262,7 +263,7 @@ void wt440Receiver::interruptHandler() {
 			receivedCode.par ^= receivedBit;
 		}
 	} else
-	// Temperature 14 bits
+	// Temperature 15 bits
 	if (_state < 70) { // 
 		//if (receivedCode.sync != 6) { RESET_STATE; return; }
 		if (duration > max2period) {

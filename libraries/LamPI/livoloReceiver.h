@@ -10,13 +10,17 @@
 #define livoloReceiver_h
 
 #include <Arduino.h>
+#include "LamPI.h"
 
-#ifndef STATISTICS
-#define STATISTICS 1			// if necessary, when 0 will compile without debug or statistics
-#endif
 
 struct livoloCode {
 	unsigned long address;		// Address of received code. [0..2^26-1]
+#ifdef STATISTICS
+	unsigned short min1Period;
+	unsigned short max1Period;
+	unsigned short min3Period;
+	unsigned short max3Period;
+#endif
 	boolean groupBit;			// Group bit set or not
 	unsigned short unit;					// Unit code of received code [0..15]
 	byte level;					// Dim level [0..15]. Will be available if switchType is dim, on_with_dim or off_with_dim.
