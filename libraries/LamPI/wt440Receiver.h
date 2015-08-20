@@ -8,10 +8,7 @@
 #define wt440Receiver_h
 
 #include <Arduino.h>
-
-#ifndef STATISTICS
-#define STATISTICS 1			// if necessary, when 0 will compile without debug or statistics
-#endif
+#include "LamPI.h"
 
 struct wt440Code {
 #ifdef STATISTICS
@@ -22,11 +19,11 @@ struct wt440Code {
 #endif
 	//unsigned int period;		// Detected duration in microseconds of 1T in the received signal
 	byte sync;					// 4 bits 
-	unsigned long address;		// 4 bits Address (house code) of received code. 
+	byte address;				// 4 bits Address (house code) of received code. 
 	byte channel;				// 2 bits Channel
-	byte wconst;					// 3 bits
-	int temperature;			//14 bits temperature (encoded)
-	int humidity;				// 8 bits humidity
+	byte wconst;				// 3 bits
+	short temperature;			//14 bits temperature (encoded)
+	byte humidity;				// 8 bits humidity
 	byte par;					// 1 bit (Xor must be 0)
 };
 

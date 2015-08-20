@@ -1,7 +1,7 @@
 /*
 * Code for RF remote 433 Slave (forwarding sensor reading over 433 to master). 
 *
-* Version 1.0 alpha; 150814
+* Version 1.4 alpha; 150814
 * (c) M. Westenberg (mw12554@hotmail.com)
 *
 * Based on contributions and work of many:

@@ -1,50 +1,51 @@
 /*
- * NewRemoteSwitch library v1.2.0 (20140128) made by Randy Simons http://randysimons.nl/
+ * auriolReceiver library v1.2.0 (20140128) made by Maarten Westenberg (mw12554 @ hotmail . com)
  *
  * License: GPLv3. See license.txt
  */
 
-#ifndef NewRemoteReceiver_h
-#define NewRemoteReceiver_h
+#ifndef auriolReceiver_h
+#define auriolReceiver_h
 
 #include <Arduino.h>
 #include "LamPI.h"
 
-struct NewRemoteCode {
-	enum SwitchType {
-		off = 0,
-		on = 1,
-		dim = 2				
-	};
-
-	unsigned int period;		// Detected duration in microseconds of 1T in the received signal
-	unsigned long address;		// Address of received code. [0..2^26-1]
-	boolean groupBit;			// Group bit set or not
-	SwitchType switchType;		// off, on, dim, on_with_dim.
-	byte unit;					// Unit code of received code [0..15]
-	boolean dimLevelPresent;	// Dim level present or not. Is available for switchType dim, but might be available for on or off too, depending on remote.
-	byte dimLevel;				// Dim level [0..15]. Will be available if switchType is dim, on_with_dim or off_with_dim.
+struct auriolCode {
+#if STATISTICS==1
+	short min1Period;			// Statistics!
+	short max1Period;
+	short min2Period;
+	short max2Period;
+#endif
+	//unsigned int period;		// Detected duration in microseconds of 1T in the received signal
+	unsigned long address;		// 8 bits Address (house code) of received code. 
+	int temperature;			//12 bits temperature (times 0.1) degrees celcius
+	int humidity;				// Must be 0, not used by this Auriol
+	byte channel;				// Channel not used by this Auriol. Will be 0!
+	byte n1;					// 4 Various bits
+	byte n2;					// 4+3 bits 24-27 and 28-30
+	byte csum;					// Last bit is CRC
 };
 
-typedef void (*NewRemoteReceiverCallBack)(NewRemoteCode);
+typedef void (*auriolReceiverCallBack)(auriolCode);
 
 /**
 * See RemoteSwitch for introduction.
 *
-* NewRemoteReceiver decodes the signal received from a 433MHz-receiver, like the "KlikAanKlikUit"-system
+* auriolReceiver decodes the signal received from a 433MHz-receiver, like the "KlikAanKlikUit"-system
 * as well as the signal sent by the RemoteSwtich class. When a correct signal is received,
 * a user-defined callback function is called.
 *
 * Note that in the callback function, the interrupts are still disabled. You can enabled them, if needed.
-* A call to the callback must be finished before NewRemoteReceiver will call the callback function again, thus
+* A call to the callback must be finished before auriolReceiver will call the callback function again, thus
 * there is no re-entrant problem.
 *
-* When sending your own code using NewRemoteSwich, disable() the receiver first.
+* When sending your own code using auriolSwich, disable() the receiver first.
 *
 * This is a pure static class, for simplicity and to limit memory-use.
 */
 
-class NewRemoteReceiver {
+class auriolReceiver {
 	public:
 		/**
 		* Initializes the decoder.
@@ -55,10 +56,10 @@ class NewRemoteReceiver {
 		*
 		* @param interrupt 	The interrupt as is used by Arduino's attachInterrupt function. See attachInterrupt for details.
 							If < 0, you must call interruptHandler() yourself.
-		* @param minRepeats The number of times the same code must be received in a row before the callback is calles
-		* @param callback Pointer to a callback function, with signature void (*func)(NewRemoteCode)
+		* @param minRepeats The number of times the same code must be received in a row before the callback is called
+		* @param callback Pointer to a callback function, with signature void (*func)(auriolCode)
 		*/
-		static void init(int8_t interrupt, byte minRepeats, NewRemoteReceiverCallBack callback);
+		static void init(int8_t interrupt, byte minRepeats, auriolReceiverCallBack callback);
 
 		/**
 		* Enable decoding. No need to call enable() after init().
@@ -99,7 +100,7 @@ class NewRemoteReceiver {
 		static int8_t _interrupt;					// Radio input interrupt
 		volatile static short _state;				// State of decoding process.
 		static byte _minRepeats;
-		static NewRemoteReceiverCallBack _callback;
+		static auriolReceiverCallBack _callback;
 		static boolean _inCallback;					// When true, the callback function is being executed; prevents re-entrance.
 		static boolean _enabled;					// If true, monitoring and decoding is enabled. If false, interruptHandler will return immediately.
 

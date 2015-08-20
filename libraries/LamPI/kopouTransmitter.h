@@ -8,10 +8,7 @@
 #define Kopou_h
 
 #include "Arduino.h"
-
-#ifndef STATISTICS
-#define STATISTICS 1			// if necessary, when 0 will compile without debug or statistics
-#endif
+#include "LamPI.h"
 
 class Kopou
 {

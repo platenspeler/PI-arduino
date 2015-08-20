@@ -113,7 +113,7 @@ void livoloReceiver::interruptHandler() {
 		// By default 1T is 100µs, but for maximum compatibility go as low as 90µs
 		if ((duration > 440) && (duration < 600)) { //400 is max of a normal pulse, 550 is startpulse
 			// Sync signal received.. Preparing for decoding
-#ifdef STATISTICS
+#if STATISTICS==1
 			receivedCode.min1Period = max1Period;
 			receivedCode.max1Period = min1Period;
 			receivedCode.min3Period = max3Period;
@@ -174,7 +174,7 @@ void livoloReceiver::interruptHandler() {
 		return;
 	}
  
-#ifdef STATISTICS
+#if STATISTICS==1
 	if (duration < max1Period) {
 		if (duration < receivedCode.min1Period) receivedCode.min1Period = duration;
 		else if (duration > receivedCode.max1Period) receivedCode.max1Period = duration;

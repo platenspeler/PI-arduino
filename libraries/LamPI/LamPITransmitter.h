@@ -8,10 +8,7 @@
 #define NewRemoteTransmitter_h
 
 #include <Arduino.h>
-
-#ifndef STATISTICS
-#define STATISTICS 1			// if necessary, when 0 will compile without debug or statistics
-#endif
+#include "LamPI.h"
 
 /**
 * NewRemoteTransmitter provides a generic class for simulation of common RF remote controls, like the A-series

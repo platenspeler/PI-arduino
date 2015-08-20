@@ -12,7 +12,7 @@
 #include "wt440Receiver.h"
 
 /************
-* wt440Receiver
+ * wt440Receiver
  * WT440H weather station sensor FUCTION
  *
  * timing:
@@ -92,9 +92,10 @@ void wt440Receiver::interruptHandler() {
 		return;
 	}
 
-	static byte receivedBit;			// Contains "bit" currently receiving
+
 	static wt440Code receivedCode;		// Contains received code
 	static wt440Code previousCode;		// Contains previous received code
+	static byte receivedBit;			// Contains "bit" currently receiving
 	static byte repeats = 0;			// The number of times the an identical code is received in a row.
 	static unsigned long edgeTimeStamp[3] = {0, };	// Timestamp of edges
 	static unsigned int min1period, max1period, min2period, max2period;
@@ -142,7 +143,7 @@ void wt440Receiver::interruptHandler() {
 		if ((duration > 750) && (duration < 1500)){ // =750 µs, minimal time between two edges before decoding starts.
 			// Sync signal, first bit received.. Preparing for decoding
 			// repeats = 0;
-#ifdef STATISTICS
+#if STATISTICS==1
 			receivedCode.min1Period = max1period;
 			receivedCode.max1Period = min1period;
 			receivedCode.min2Period = max2period;
@@ -187,10 +188,7 @@ void wt440Receiver::interruptHandler() {
 	// Address is 4 bits, max 8 pulses	
 	if (_state < 16) { // 
 		//if (receivedCode.sync != 6) { RESET_STATE; return; }
-		if (duration > max2period) {
-			RESET_STATE;
-			return;
-		}
+
 		if (duration > max1period) {
 			// We have a 0
 			_state++;
@@ -207,10 +205,6 @@ void wt440Receiver::interruptHandler() {
 	// Channel is 2 bits
 	if (_state < 20) { // 
 		//if (receivedCode.sync != 6) { RESET_STATE; return; }
-		if (duration > max2period) {
-			RESET_STATE;
-			return;
-		}
 		if (duration > max1period) {
 			// We have a 0
 			_state++;
@@ -226,11 +220,6 @@ void wt440Receiver::interruptHandler() {
 	} else
 	// Constant 3 bits
 	if (_state < 26) { // 
-		//if (receivedCode.sync != 6) { RESET_STATE; return; }
-		if (duration > max2period) {
-			RESET_STATE;
-			return;
-		}
 		if (duration > max1period) {
 			_state++;
 			receivedBit = 0;
@@ -246,7 +235,7 @@ void wt440Receiver::interruptHandler() {
 	// humidity 7 bits
 	if (_state < 40) { 
 		// If constant not equals 6, do not bother
-		if ((duration > max2period) || (receivedCode.wconst != 6)) { 
+		if (receivedCode.wconst != 6) { 
 			RESET_STATE;
 			return;
 		}
@@ -265,11 +254,6 @@ void wt440Receiver::interruptHandler() {
 	} else
 	// Temperature 15 bits
 	if (_state < 70) { // 
-		//if (receivedCode.sync != 6) { RESET_STATE; return; }
-		if (duration > max2period) {
-			RESET_STATE;
-			return;
-		}
 		if (duration > max1period) {
 			// We have a 0
 			_state++;
@@ -285,11 +269,6 @@ void wt440Receiver::interruptHandler() {
 	} else
 	// parity is 1 bit
 	if (_state < 72) { // 
-		//if (receivedCode.sync != 6) { RESET_STATE; return; }
-		if (duration > max2period) {
-			RESET_STATE;
-			return;
-		}
 		if (duration > max1period) {
 			// We have a 0
 			_state++;
@@ -298,14 +277,15 @@ void wt440Receiver::interruptHandler() {
 		else { 
 			receivedBit = 1; 
 		}
-		if (_state % 2 == 1 ) receivedCode.par ^= receivedBit; 
-	} else { // Otherwise the entire sequence is invalid
+		if (_state % 2 == 1 ) receivedCode.par ^= receivedBit; // No use for a 0 value
+	} 
+	else { // Otherwise the entire sequence is invalid
 			RESET_STATE;
 			return;
 	}
 	_state++;
 
-#ifdef STATISTICS	
+#if STATISTICS==1
 	// Statistics
 	if (duration > max1period) {
 			if (duration < receivedCode.min2Period) receivedCode.min2Period = duration;
@@ -316,8 +296,8 @@ void wt440Receiver::interruptHandler() {
 			if (duration > receivedCode.max1Period) receivedCode.max1Period = duration;
 	}
 #endif	
-	// Message complete
-	if (_state == 72) {
+	// Message complete, just in case we check on >72 chars too
+	if (_state >= 72) {
 		
 		// a valid signal was found!
 		if (

@@ -17,6 +17,7 @@
 #endif
 
 #include <Wire.h>
+#include "LamPI.h"
 
 #define HTDU21D_ADDRESS 0x40  //Unshifted 7-bit I2C address for the sensor
 

@@ -8,10 +8,7 @@
 #define wt440_h
 
 #include "Arduino.h"
-
-#ifndef STATISTICS
-#define STATISTICS 1			// if necessary, when 0 will compile without debug or statistics
-#endif
+#include "LamPI.h"
 
 // Define what we are going to send. It does NOT fit in a long so make it a struct
 struct wt440Code {

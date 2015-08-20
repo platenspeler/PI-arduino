@@ -79,10 +79,10 @@ void NewRemoteReceiver::interruptHandler() {
 		return;
 	}
 
-	static byte receivedBit;		// Contains "bit" currently receiving
+	static byte receivedBit;				// Contains "bit" currently receiving
 	static NewRemoteCode receivedCode;		// Contains received code
 	static NewRemoteCode previousCode;		// Contains previous received code
-	static byte repeats = 0;		// The number of times the an identical code is received in a row.
+	static byte repeats = 0;				// The number of times the an identical code is received in a row.
 	static unsigned long edgeTimeStamp[3] = {0, };	// Timestamp of edges
 	static unsigned int min1Period, max1Period, min5Period, max5Period;
 	static bool skip;

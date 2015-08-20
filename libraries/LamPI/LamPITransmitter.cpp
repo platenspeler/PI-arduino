@@ -116,7 +116,7 @@ void NewRemoteTransmitter::_sendStartPulse(){
 	digitalWrite(_pin, HIGH);
 	delayMicroseconds(_periodusec);
 	digitalWrite(_pin, LOW);
-	delayMicroseconds(_periodusec * 10 + (_periodusec >> 1)); // Actually 10.5T insteat of 10.44T. Close enough.
+	delayMicroseconds(_periodusec * 10 + (_periodusec >> 1)); // Actually 10.5T instead of 10.44T. Close enough.
 }
 
 void NewRemoteTransmitter::_sendAddress(unsigned long address) {
