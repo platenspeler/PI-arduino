@@ -10,17 +10,20 @@
 */
 
 #include <Wire.h>
-#include "bmp085.h"
+#include <bmp085.h>
 
 #define BMP085_ADDRESS 0x77  // I2C address of BMP085
 
 const unsigned char OSS = 0;  // Oversampling Setting
 
-
-
 BMP085::BMP085()
 {
   //Set initial values for private vars
+}
+
+void BMP085::begin(void)
+{
+  Wire.begin();
 }
 
 // Read 2 bytes from the BMP085

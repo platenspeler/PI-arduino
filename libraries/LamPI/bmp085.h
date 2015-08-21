@@ -10,12 +10,7 @@
 
 */
 
-
-#if defined(ARDUINO) && ARDUINO >= 100
- #include "Arduino.h"
-#else
- #include "WProgram.h"
-#endif
+#include <Arduino.h>
 #include "LamPI.h"
 
 #define BMP085_ADDRESS 0x77  // I2C address of BMP085
@@ -26,16 +21,15 @@ public:
   BMP085();
 
   //Public Functions
+  void begin();
   int Calibration();
   short GetTemperature();
   long GetPressure();
 
   //Public Variables
 
-
   // Use these for altitude conversions
   const float p0 = 101325;     // Pressure at sea level (Pa)
-
 
 private:
   //Private Functions

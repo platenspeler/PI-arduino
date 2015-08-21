@@ -167,7 +167,6 @@ void livoloReceiver::interruptHandler() {
 			}
 			receivedBit = 0;
 		}
-		//Serial.print(_state); Serial.print(":"); Serial.println(receivedCode.unit);
 	} 
 	else { // Otherwise the entire sequence is invalid
 		RESET_STATE;

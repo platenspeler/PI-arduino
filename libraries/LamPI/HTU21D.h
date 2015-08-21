@@ -8,14 +8,8 @@
  Get humidity and temperature from the HTU21D sensor.
  
  */
- 
 
-#if defined(ARDUINO) && ARDUINO >= 100
- #include "Arduino.h"
-#else
- #include "WProgram.h"
-#endif
-
+#include <Arduino.h>
 #include <Wire.h>
 #include "LamPI.h"
 
@@ -28,6 +22,7 @@
 #define WRITE_USER_REG  0xE6
 #define READ_USER_REG  0xE7
 #define SOFT_RESET  0xFE
+
 
 class HTU21D {
 

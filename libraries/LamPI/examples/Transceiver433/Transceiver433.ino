@@ -13,26 +13,13 @@
 *
 * Connect the receiver to digital pin 2, sender to pin 8.
 * NOTE: You can enable/disable modules in the LamPI.h file
-*		Sorry for making the codein this file so messy :-) with #if
+*		Sorry for making the code in this file so messy :-) with #if
 */
 
-#include <LamPI.h>		// Set statistics 1 (default), change line in file if no statistics are needed
-
-// Devices Define
-#define KAKU    0
-#define ACTION  1
-#define BLOKKER 2
-#define KAKUOLD 3
-#define ELRO    4
-#define LIVOLO  5
-#define KOPOU   6
-
-// Sensors Define
-#define ONBOARD 0
-#define WT440  1
-#define OREGON 2
-#define AURIOL 3
-#define CRESTA 4
+// Sensors Include
+#include <Arduino.h>
+#include <Wire.h>
+#include "LamPI.h"		// Set statistics 1 (default), change line in file if no statistics are needed
 
 // Transmitters Include
 #include <LamPITransmitter.h>
@@ -47,18 +34,17 @@
 #include <kopouReceiver.h>
 #include <RemoteReceiver.h>
 
-#if S_AURIOL==1
-# include <auriolReceiver.h>
-#endif
+//#if S_AURIOL==1
+# include <auriolReceiver.h>	// if auriolCode undefined, preprocessor will fail.
+//#endif
 
-// Sensors Include
-#include <Wire.h>
+
 
 #if S_HTU21D==1
-#include "HTU21D.h"
+# include "HTU21D.h"
 #endif
 #if S_BMP085==1
-#include "bmp085.h"
+# include "bmp085.h"
 #endif
 
 // Others
@@ -76,13 +62,11 @@ unsigned long codecs;		// must be at least 32 bits for 32 positions. Use long in
 // with a period duration of 260ms (default), repeating the transmitted
 // code 2^3=8 times.
 
-Livolo livolo(8);
-Kopou kopou(8);
-ActionTransmitter atransmitter(8, 195, 3);
-NewRemoteTransmitter transmitter(8, 260, 3);
+
+//Kopou kopou(8);			// No function or transmitting Kopou yet (not needed)
 
 
-// Sensors
+// Sensors Declarations
 #if S_HTU21D==1
   HTU21D myHumidity;		// Init Sensor(s)
 #endif
@@ -118,8 +102,7 @@ void setup() {
   
   // Define the interrupt chain
   // The sequence might be relevant, defines the order of execution, put easy protocols first
- 
-  // First 16 bits are for sensors (+16), last 16 bits for devices,
+  // onCodec: First 16 bits are for sensors (+16), last 16 bits for devices,
   // By removing a line below, that type of device will not be scanned anymore :-)  
   //
 
@@ -137,9 +120,9 @@ void setup() {
 #if S_HTU21D==1
   myHumidity.begin(); onCodec(16 + ONBOARD);
   myHumidity.readHumidity();			// First read value after starting does not make sense.  
-										// Avoid this value being sent to raspberry daemon
 #endif
-#if S_BMP085==1										
+#if S_BMP085==1
+  bmp085.begin(); onCodec(16 + ONBOARD);
   if (bmp085.Calibration() == 998) Serial.println(F("No bmp085"));	// OnBoard
 #endif
 }
@@ -201,7 +184,7 @@ void readSensors() {
 			Serial.print(msgCnt);
 			Serial.print(F(" 3 0 40 0 "));		// Address bus 40, channel 0
 			Serial.print(temp,1);
-			Serial.print(" ");
+			Serial.print(F(" "));
 			Serial.println(humd,1);
 			msgCnt++;
 		}		
@@ -216,9 +199,9 @@ void readSensors() {
 			Serial.print(msgCnt);
 			Serial.print(F(" 3 0 77 0 "));		// Address bus 77, channel 0
 			Serial.print(temperature, DEC);
-			Serial.print(" ");
+			Serial.print(F(" "));
 			Serial.print(pressure, DEC);
-			Serial.print(" ");
+			Serial.print(F(" "));
 			Serial.print(altitude, 2);
 			Serial.println();
 			msgCnt++;
@@ -242,7 +225,7 @@ void parseCmd(char *readLine)
   char *pch;								// Pointer to character position
 	
   if (readLine[0] != '>') {
-	Serial.println("! Error: cmd starts with \">\" ");
+	Serial.println(F("! Error: cmd \">\" "));
 	return;
   } else { 
 	pch = readLine+1;
@@ -256,10 +239,13 @@ void parseCmd(char *readLine)
 	  pch = strtok (NULL, " ,."); adm = atoi(pch);
 	  switch (adm) {
 		case 0:	// List device Codecs
-			Serial.print("! Cod = "); 
+			Serial.print(F("< "));
+			Serial.print(msgCnt);
+			Serial.print(F(" 0 0 "));
 			Serial.println(codecs,BIN);
+			msgCnt++;
 		break;
-		case 1:	// List sensor Codecs
+		case 1:	// List codec value for ONE sensor only
 			pch = strtok (NULL, " ,."); codec = atoi(pch);
 			pch = strtok (NULL, " ,."); val = atoi(pch);
 			if (val == 1) onCodec(codec); else offCodec(codec);
@@ -271,7 +257,14 @@ void parseCmd(char *readLine)
 		case 3:	// Debug level
 			pch = strtok (NULL, " ,."); debug = atoi(pch);
 			if (debug > 2) { debug = 1; } else if (debug < 0) { debug = 0; }
-			Serial.print(F("! Debug = ")); Serial.println(debug);
+			
+			Serial.print(F("< "));
+			Serial.print(msgCnt);
+			Serial.print(F(" 0 3 "));
+			Serial.print(debug);
+			if (debug) Serial.print(F(" ! Debug"));
+			Serial.println("");
+			msgCnt++;
 		break;
 		default:
 			Serial.println(F("! ERROR admin cmd"));
@@ -290,7 +283,7 @@ void parseCmd(char *readLine)
 				parseLivolo(pch);
 			break;
 			default:
-				Serial.println("! ERROR: Unknown codec");
+				Serial.println(F("! ERROR: Codec"));
 				return;
 		}
 		msgCnt++;
@@ -299,7 +292,7 @@ void parseCmd(char *readLine)
 		//
 	break;
 	default:
-		Serial.print("! Unknown command ");
+		Serial.print(F("! Unknown command "));
 		Serial.println(cmd);
   }
   msgCnt++;
@@ -314,6 +307,7 @@ void parseKaku(char *pch)
   int group;
   int unit;
   int level;
+  NewRemoteTransmitter transmitter(8, 260, 3);
   pch = strtok (NULL, " ,."); group = atoi(pch);
   pch = strtok (NULL, " ,."); unit = atoi(pch);  
   pch = strtok (NULL, " ,."); level = atoi(pch);
@@ -324,7 +318,7 @@ void parseKaku(char *pch)
     transmitter.sendDim(group, unit, level);
   } 
   else {
-    Serial.println("! ERROR Invalid input. Dim level must be between 0 and 15!");
+    Serial.println(F("! ERROR dim not between 0 and 15!"));
   }
 }
 
@@ -337,6 +331,7 @@ void parseAction(char *pch)
 {
 	byte group;
 	char unit;
+	ActionTransmitter atransmitter(8, 195, 3);
 	boolean lvl = false;
 	pch = strtok (NULL, " ,."); group = atoi(pch);
 	pch = strtok (NULL, " ,."); unit = atoi(pch);  
@@ -355,12 +350,13 @@ void parseLivolo(char *pch)
 	int group;
 	int unit;
 	char level;
+	Livolo livolo(8);
 	pch = strtok (NULL, " ,."); group = atoi(pch);
 	pch = strtok (NULL, " ,."); unit = atoi(pch);  
 	pch = strtok (NULL, " ,."); level = atoi(pch);
-	Serial.print("! Livolo :: G: "); Serial.print(group);
-	Serial.print(", U: "); Serial.print(unit);
-	Serial.print(", L: "); Serial.println(level);
+	Serial.print(F("! Livolo:: G: ")); Serial.print(group);
+	Serial.print(F(", U: ")); Serial.print(unit);
+	Serial.print(F(", L: ")); Serial.println(level);
 	livolo.sendButton(group, unit);
 }
 
@@ -372,9 +368,9 @@ void parseLivolo(char *pch)
 // WT440
 void showWt440Code(wt440Code receivedCode) {
 	
-	Serial.print("< ");
+	Serial.print(F("< "));
 	Serial.print(msgCnt);
-	Serial.print(" 3 1 ");
+	Serial.print(F(" 3 1 "));
 	Serial.print(receivedCode.address);
 	Serial.print(" ");
 	Serial.print(receivedCode.channel);
@@ -384,13 +380,13 @@ void showWt440Code(wt440Code receivedCode) {
 	Serial.print(receivedCode.humidity);
 
 	if (debug >= 1) {
-		Serial.print(" ! WT440:: x: "); Serial.print(receivedCode.wconst);
-		Serial.print(", P: "); Serial.print(receivedCode.par);
+		Serial.print(F(" ! WT440:: x: ")); Serial.print(receivedCode.wconst);
+		Serial.print(F(", P: ")); Serial.print(receivedCode.par);
 # if STATISTICS==1
-		Serial.print(", P1: "); Serial.print(receivedCode.min1Period);
-		Serial.print("-"); Serial.print(receivedCode.max1Period);
-		Serial.print(", P2: "); Serial.print(receivedCode.min2Period);
-		Serial.print("-"); Serial.print(receivedCode.max2Period);
+		Serial.print(F(", P1: ")); Serial.print(receivedCode.min1Period);
+		Serial.print(F("-")); Serial.print(receivedCode.max1Period);
+		Serial.print(F(", P2: ")); Serial.print(receivedCode.min2Period);
+		Serial.print(F("-")); Serial.print(receivedCode.max2Period);
 # endif
 	}
 	Serial.println("");
@@ -399,36 +395,38 @@ void showWt440Code(wt440Code receivedCode) {
 
 // --------------------------------------------------------------------------------
 // AURIOL
+// As the preprocessor is gettig wild when S_AURIOL != 1, we for the moment
+// have to comment the code out.
 
 #if S_AURIOL==1
 //
-//void showAuriolCode(auriolCode receivedCode) {
-//	
-//	Serial.print("< ");
-//	Serial.print(msgCnt);
-//	Serial.print(" 3 3 ");
-//	Serial.print(receivedCode.address);
-//	Serial.print(" ");
-//	Serial.print(receivedCode.channel);
-//	Serial.print(" ");
-//	Serial.print(receivedCode.temperature);
-//	Serial.print(" ");
-//	Serial.print(receivedCode.humidity);
-//
-//	if (debug >= 1) {
-//		Serial.print(" ! Auriol Cs: "); Serial.print(receivedCode.csum);
-//		Serial.print(", N1: "); Serial.print(receivedCode.n1,BIN);
-//		Serial.print(", N2: "); Serial.print(receivedCode.n2,BIN);	
-//# if STATISTICS==1
-//		Serial.print(", P1: "); Serial.print(receivedCode.min1Period);
-//		Serial.print("-"); Serial.print(receivedCode.max1Period);
-//		Serial.print(", P2: "); Serial.print(receivedCode.min2Period);
-//		Serial.print("-"); Serial.print(receivedCode.max2Period);
-//# endif
-//	}
-//	Serial.println("");
-//	msgCnt++;
-//}
+void showAuriolCode(auriolCode receivedCode) {
+	
+	Serial.print(F("< "));
+	Serial.print(msgCnt);
+	Serial.print(F(" 3 3 "));
+	Serial.print(receivedCode.address);
+	Serial.print(F(" "));
+	Serial.print(receivedCode.channel);
+	Serial.print(F(" "));
+	Serial.print(receivedCode.temperature);
+	Serial.print(F(" "));
+	Serial.print(receivedCode.humidity);
+
+	if (debug >= 1) {
+		Serial.print(F(" ! Auriol Cs: ")); Serial.print(receivedCode.csum);
+		Serial.print(F(", N1: ")); Serial.print(receivedCode.n1,BIN);
+		Serial.print(F(", N2: ")); Serial.print(receivedCode.n2,BIN);	
+# if STATISTICS==1
+		Serial.print(F(", P1: ")); Serial.print(receivedCode.min1Period);
+		Serial.print(F("-")); Serial.print(receivedCode.max1Period);
+		Serial.print(F(", P2: ")); Serial.print(receivedCode.min2Period);
+		Serial.print(F("-")); Serial.print(receivedCode.max2Period);
+# endif
+	}
+	Serial.println("");
+	msgCnt++;
+}
 #endif
 
 // --------------------------------------------------------------------------------
@@ -438,32 +436,32 @@ void showWt440Code(wt440Code receivedCode) {
 void showKakuCode(NewRemoteCode receivedCode) {
 
   // Print the received code. 2 for received codes and 0 for codec of Kaku
-  Serial.print("< ");
+  Serial.print(F("< "));
   Serial.print(msgCnt);
-  Serial.print(" 2 0 ");
+  Serial.print(F(" 2 0 "));
   Serial.print(receivedCode.address);
   msgCnt++;
   
   if (receivedCode.groupBit) {
-    Serial.print(" group ");
+    Serial.print(F(" G "));
   } 
   else {
-    Serial.print(" ");
+    Serial.print(F(" "));
     Serial.print(receivedCode.unit);
   }
   switch (receivedCode.switchType) {
     case NewRemoteCode::off:
-      Serial.print(" off");
+      Serial.print(F(" off"));
       break;
     case NewRemoteCode::on:
-      Serial.print(" on");
+      Serial.print(F(" on"));
       break;
     case NewRemoteCode::dim:
-      // Serial.print(" dim ");
+      // Serial.print(F(" dim "));
       break;
   }
   if (receivedCode.dimLevelPresent) {
-	Serial.print(" ");
+	Serial.print(F(" "));
     Serial.print(receivedCode.dimLevel);
   }
   Serial.println("");
@@ -476,23 +474,23 @@ void showKakuCode(NewRemoteCode receivedCode) {
 // LIVOLO
 void showLivoloCode(livoloCode receivedCode) {
 	
-	Serial.print("< ");
+	Serial.print(F("< "));
 	Serial.print(msgCnt);
-	Serial.print(" 2 5 ");
+	Serial.print(F(" 2 5 "));
 	Serial.print(receivedCode.address);
-	Serial.print(" ");
+	Serial.print(F(" "));
 	Serial.print(receivedCode.unit);
-	Serial.print(" ");
+	Serial.print(F(" "));
 	Serial.print(receivedCode.level);
 
 	
 	if (debug >= 1) {
-		Serial.print(" ! Livolo "); 
+		Serial.print(F(" ! Livolo ")); 
 #if STATISTICS==1
-		Serial.print(", P1: "); Serial.print(receivedCode.min1Period);
-		Serial.print("-"); Serial.print(receivedCode.max1Period);
-		Serial.print(", P3: "); Serial.print(receivedCode.min3Period);
-		Serial.print("-"); Serial.print(receivedCode.max3Period);
+		Serial.print(F(", P1: ")); Serial.print(receivedCode.min1Period);
+		Serial.print(F("-")); Serial.print(receivedCode.max1Period);
+		Serial.print(F(", P3: ")); Serial.print(receivedCode.min3Period);
+		Serial.print(F("-")); Serial.print(receivedCode.max3Period);
 #endif
 	}
 	Serial.println("");
@@ -502,21 +500,21 @@ void showLivoloCode(livoloCode receivedCode) {
 // --------------------------------------------------------------------------------
 // KOPOU
 void showKopouCode(kopouCode receivedCode) {
-	Serial.print("< ");
+	Serial.print(F("< "));
 	Serial.print(msgCnt);
-	Serial.print(" 2 6 ");
+	Serial.print(F(" 2 6 "));
 	Serial.print(receivedCode.address);
-	Serial.print(" ");
+	Serial.print(F(" "));
 	Serial.print(receivedCode.unit);
-	Serial.print(" ");
+	Serial.print(F(" "));
 	Serial.print(receivedCode.level);
 	
 	if (debug >= 1) {
-		Serial.print(" ! Kopou "); 
+		Serial.print(F(" ! Kopou ")); 
 #if STATISTICS==1
-		Serial.print(", P: "); Serial.print(receivedCode.period);
-		Serial.print(", P1: "); Serial.print(receivedCode.minPeriod);
-		Serial.print("-"); Serial.print(receivedCode.maxPeriod);
+		Serial.print(F(", P: ")); Serial.print(receivedCode.period);
+		Serial.print(F(", P1: ")); Serial.print(receivedCode.minPeriod);
+		Serial.print(F("-")); Serial.print(receivedCode.maxPeriod);
 #endif
 	}
 	Serial.println("");
@@ -561,22 +559,22 @@ void showRemoteCode(unsigned long receivedCode, unsigned int period) {
 			code =  code / 3;
 		}
 	}
-	// Following code hould be equal for ALL receivers of this type
-	Serial.print("< ");
+	// Following code should be equal for ALL receivers of this type
+	Serial.print(F("< "));
 	Serial.print(msgCnt);
-	Serial.print(" 2 ");					// action is type 1, blokker type 2, old=3, Elro=4
+	Serial.print(F(" 2 "));					// action is type 1, blokker type 2, old=3, Elro=4
 	Serial.print(codec);
-	Serial.print(" ");
+	Serial.print(F(" "));
 	Serial.print(address);
-	Serial.print(" ");
+	Serial.print(F(" "));
 	Serial.print(unit);
-	Serial.print(" ");
+	Serial.print(F(" "));
 	Serial.print(level);
 
 	if (debug >= 1) {
-		Serial.print(" ! Remote "); 
+		Serial.print(F(" ! Remote ")); 
 #if STATISTICS==1
-		Serial.print(", P: "); Serial.print(period);
+		Serial.print(F(", P: ")); Serial.print(period);
 #endif	 
 	}
 	Serial.println("");
