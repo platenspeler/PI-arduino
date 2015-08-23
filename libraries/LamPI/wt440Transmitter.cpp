@@ -1,7 +1,7 @@
 /*
   wt440Transmitter, transmitter part of wt440 messages
   Created by Maarten Westenberg (mw12554 @ hotmail . com)
-  Released into the public domain.
+  
   
 */
 
@@ -49,17 +49,16 @@ wt440Transmitter::wt440Transmitter(byte pin)
 
 void wt440Transmitter::sendMsg(wt440Code msgCode) {
   unsigned int temp, humi;
-  Serial.print("tx: a:");
-  Serial.print(msgCode.address);
-  Serial.print(" c:");
-  Serial.print(msgCode.channel);
-  Serial.print(" t:");
-  Serial.print(msgCode.temp);
-  Serial.print(" h:");
-  Serial.print(msgCode.humi);
-  Serial.println("");
-  
-  
+//  Serial.print("tx: a:");
+//  Serial.print(msgCode.address);
+//  Serial.print(" c:");
+//  Serial.print(msgCode.channel);
+//  Serial.print(" t:");
+//  Serial.print(msgCode.temp);
+//  Serial.print(" h:");
+//  Serial.print(msgCode.humi);
+//  Serial.println("");
+    
   temp = (unsigned int) (msgCode.temp * 128) +6400 ;
   humi = (unsigned int) msgCode.humi;
   

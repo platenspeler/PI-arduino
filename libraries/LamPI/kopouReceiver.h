@@ -20,7 +20,7 @@ struct kopouCode {
 #endif
 	unsigned long address;		// Address of received code. [0..2^26-1]
 	boolean groupBit;			// Group bit set or not
-	unsigned short unit;					// Unit code of received code [0..15]
+	unsigned short unit;		// Unit code of received code [0..15]
 	byte level;					// Dim level [0..15]. Will be available if switchType is dim, on_with_dim or off_with_dim.
 };
 

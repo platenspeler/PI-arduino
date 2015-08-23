@@ -23,10 +23,10 @@
 
 // define and enable Sensors. Often these sensors are mutually exclusive:
 // For example if you have a BMP085 there will not be a SHT21/HTU21D
-#define S_BMP085 1
-#define S_HTU21D 0
+#define S_BMP085 0
+#define S_HTU21D 1
 #define S_WT440 1
-#define S_AURIOL 0
+#define S_AURIOL 1
 
 
 // ==========================================================================

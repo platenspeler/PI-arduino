@@ -5,7 +5,7 @@
  * License: GPLv3. See license.txt
  */
 
-#include "LamPITransmitter.h"
+#include "kakuTransmitter.h"
 
 
 NewRemoteTransmitter::NewRemoteTransmitter(byte pin, unsigned int periodusec, byte repeats) {

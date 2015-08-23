@@ -22,7 +22,7 @@
 #include "LamPI.h"		// Set statistics 1 (default), change line in file if no statistics are needed
 
 // Transmitters Include
-#include <LamPITransmitter.h>
+#include <kakuTransmitter.h>
 #include <RemoteTransmitter.h>
 #include <livoloTransmitter.h>
 #include <kopouTransmitter.h>
@@ -311,7 +311,11 @@ void parseKaku(char *pch)
   pch = strtok (NULL, " ,."); group = atoi(pch);
   pch = strtok (NULL, " ,."); unit = atoi(pch);  
   pch = strtok (NULL, " ,."); level = atoi(pch);
-  if (level == 0) {
+
+  if (pch[0] == 'o') { // pch == 'on' as sent by PI-arduino
+	transmitter.sendUnit(group, unit, true);
+  }
+  else if (level == 0) {
     transmitter.sendUnit(group, unit, false);
   } 
   else if (level >= 1 && level <= 15) {
@@ -320,6 +324,7 @@ void parseKaku(char *pch)
   else {
     Serial.println(F("! ERROR dim not between 0 and 15!"));
   }
+  Serial.print(F(" ! Kaku send: ")); Serial.println(pch);
 }
 
 
@@ -449,20 +454,21 @@ void showKakuCode(NewRemoteCode receivedCode) {
     Serial.print(F(" "));
     Serial.print(receivedCode.unit);
   }
+  
   switch (receivedCode.switchType) {
     case NewRemoteCode::off:
-      Serial.print(F(" off"));
+      Serial.print(F(" 0"));
       break;
     case NewRemoteCode::on:
       Serial.print(F(" on"));
       break;
     case NewRemoteCode::dim:
       // Serial.print(F(" dim "));
-      break;
-  }
-  if (receivedCode.dimLevelPresent) {
-	Serial.print(F(" "));
-    Serial.print(receivedCode.dimLevel);
+	  if (receivedCode.dimLevelPresent) {
+		Serial.print(F(" "));
+		Serial.print(receivedCode.dimLevel);
+	  }
+    break;
   }
   Serial.println("");
   Serial.flush();

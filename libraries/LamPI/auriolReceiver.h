@@ -1,5 +1,8 @@
 /*
- * auriolReceiver library v1.2.0 (20140128) made by Maarten Westenberg (mw12554 @ hotmail . com)
+ * auriolReceiver library v1.2.0 (20140128) 
+ * made by Maarten Westenberg (mw12554 @ hotmail . com)
+ * Version 1.5.0
+ * Date: August 20, 2015
  *
  * License: GPLv3. See license.txt
  */
