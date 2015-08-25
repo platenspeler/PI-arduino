@@ -1,15 +1,14 @@
 /*
 * Code for RF remote switch Gateway. 
-* Focus on Kaku, wt440, Livolo devices first, more to follow
 *
-* Version 1.4 beta; 150811
+* Version 1.6 beta; 150823
 * (c) M. Westenberg (mw12554@hotmail.com)
 *
 * Based on contributions and work of many:
 * 	Randy Simons (Kaku and InterruptChain)
 *	Spc for Livolo
 *	SPARCfun for HTU21 code and BMP85
-* 	and others (Wt440) etc.
+* 	and others (Wt440 protocol) etc.
 *
 * Connect the receiver to digital pin 2, sender to pin 8.
 * NOTE: You can enable/disable modules in the LamPI.h file
@@ -28,18 +27,25 @@
 #include <kopouTransmitter.h>
 
 // Receivers include
+//#if S_WT440
 #include <wt440Receiver.h>
+//#endif
 #include <kakuReceiver.h>
 #include <livoloReceiver.h>
-#include <kopouReceiver.h>
+#include <RemoteReceiver.h>
+//#if R_KOPOU==1
+#  include <kopouReceiver.h>
+//#endif
 #include <RemoteReceiver.h>
 
 //#if S_AURIOL==1
 # include <auriolReceiver.h>	// if auriolCode undefined, preprocessor will fail.
 //#endif
 
-
-
+#if S_DALLAS==1
+# include "OneWire.h"
+# include "DallasTemperature.h"
+#endif
 #if S_HTU21D==1
 # include "HTU21D.h"
 #endif
@@ -67,10 +73,15 @@ unsigned long codecs;		// must be at least 32 bits for 32 positions. Use long in
 
 
 // Sensors Declarations
+#if S_DALLAS==1
+  OneWire oneWire(ONE_WIRE_BUS);
+  // Pass our oneWire reference to Dallas Temperature. 
+  DallasTemperature sensors(&oneWire);
+  int numberOfDevices; // Number of temperature devices found
+#endif
 #if S_HTU21D==1
   HTU21D myHumidity;		// Init Sensor(s)
 #endif
-
 #if S_BMP085==1
   BMP085 bmp085;
 #endif
@@ -91,10 +102,14 @@ void setup() {
   NewRemoteReceiver::init(-1, 2, showKakuCode);
   RemoteReceiver::init(-1, 2, showRemoteCode);
   livoloReceiver::init(-1, 3, showLivoloCode);
+#if R_KOPOU==1
   kopouReceiver::init(-1, 3, showKopouCode);
+#endif
+#if S_WT440==1
   wt440Receiver::init(-1, 1, showWt440Code);
+#endif
 #if S_AURIOL==1
-  auriolReceiver::init(-1, 1, showAuriolCode);
+  auriolReceiver::init(-1, 2, showAuriolCode);
 #endif
 
   // Change interrupt mode to CHANGE (on flanks)
@@ -106,17 +121,26 @@ void setup() {
   // By removing a line below, that type of device will not be scanned anymore :-)  
   //
 
+#if S_AURIOL==1
+  InterruptChain::addInterruptCallback(0, auriolReceiver::interruptHandler); onCodec(16 + AURIOL);
+#endif
   InterruptChain::addInterruptCallback(0, RemoteReceiver::interruptHandler); onCodec(ACTION);
   InterruptChain::addInterruptCallback(0, NewRemoteReceiver::interruptHandler); onCodec(KAKU);
   InterruptChain::addInterruptCallback(0, livoloReceiver::interruptHandler); onCodec(LIVOLO);
+#if R_KOPOU==1
   InterruptChain::addInterruptCallback(0, kopouReceiver::interruptHandler);	onCodec(KOPOU);
+#endif
+#if S_WT440==1
   InterruptChain::addInterruptCallback(0, wt440Receiver::interruptHandler); onCodec(16 + WT440);
-#if S_AURIOL==1
-  InterruptChain::addInterruptCallback(0, auriolReceiver::interruptHandler); onCodec(16 + AURIOL);
-#endif 
+#endif
 
   time = millis();
 
+#if S_DALLAS==1
+  sensors.begin();
+  numberOfDevices = sensors.getDeviceCount();
+  Serial.print("#devs: ");Serial.println(numberOfDevices);
+#endif
 #if S_HTU21D==1
   myHumidity.begin(); onCodec(16 + ONBOARD);
   myHumidity.readHumidity();			// First read value after starting does not make sense.  
@@ -175,6 +199,43 @@ void setCodec (byte codec, byte val) {
 void readSensors() {
 	if ((millis() - time) > 63000) {				// 63 seconds, so avoiding collisions with other cron jobs
 		time = millis();
+#if S_DALLAS
+		uint8_t ind;
+		DeviceAddress tempDeviceAddress; // We'll use this variable to store a found device address
+		sensors.requestTemperatures();
+		for(int i=0; i<numberOfDevices; i++)
+		{
+			// Search the wire for address
+			if(sensors.getAddress(tempDeviceAddress, i))
+			{
+				// Output the device ID
+				if (debug) {
+					Serial.print("! Temperature for device: ");
+					Serial.println(i, DEC);
+				}
+				
+				Serial.print(F("< "));
+				Serial.print(msgCnt);
+				Serial.print(F(" 3 0 "));					// Internal Sensor
+				
+				// Address bus is tempDeviceAddress, channel 0
+				// For LamPI, print in different format compatible with WiringPI
+				for (uint8_t j= 0; j < 7; j++)				// Skip int[7], this is CRC
+				{
+					if (j<1) ind=j; else ind=7-j;
+					if (j==1) Serial.print("-");
+					if (tempDeviceAddress[ind] < 16) Serial.print("0");
+					Serial.print(tempDeviceAddress[ind], HEX);
+				}
+				Serial.print (F(" 0 "));						// Channel
+				// It responds almost immediately. Let's print out the data
+				float tempC = sensors.getTempC(tempDeviceAddress);
+				Serial.print(tempC,1);
+				Serial.println(F(" 0"));					// No Humidity, make 0
+			} 
+			//else ghost device! Check your power requirements and cabling
+		}
+#endif
 #if S_HTU21D==1
 		// HTU21 or SHT21
 		float humd = myHumidity.readHumidity();
@@ -371,6 +432,7 @@ void parseLivolo(char *pch)
 
 // --------------------------------------------------------------------------------
 // WT440
+#if S_WT440==1
 void showWt440Code(wt440Code receivedCode) {
 	
 	Serial.print(F("< "));
@@ -397,12 +459,12 @@ void showWt440Code(wt440Code receivedCode) {
 	Serial.println("");
 	msgCnt++;
 }
+#endif
 
 // --------------------------------------------------------------------------------
 // AURIOL
 // As the preprocessor is gettig wild when S_AURIOL != 1, we for the moment
 // have to comment the code out.
-
 #if S_AURIOL==1
 //
 void showAuriolCode(auriolCode receivedCode) {
@@ -505,6 +567,7 @@ void showLivoloCode(livoloCode receivedCode) {
 
 // --------------------------------------------------------------------------------
 // KOPOU
+#if R_KOPOU==1
 void showKopouCode(kopouCode receivedCode) {
 	Serial.print(F("< "));
 	Serial.print(msgCnt);
@@ -526,6 +589,7 @@ void showKopouCode(kopouCode receivedCode) {
 	Serial.println("");
 	msgCnt++;
 }
+#endif
 
 // --------------------------------------------------------------------------------
 // REMOTE

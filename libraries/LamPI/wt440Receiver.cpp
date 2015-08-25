@@ -192,7 +192,7 @@ void wt440Receiver::interruptHandler() {
 		if (duration > max1period) {
 			// We have a 0
 			_state++;
-			receivedCode.address = receivedCode.address * 2 + 0;
+			receivedCode.address = receivedCode.address * 2 ; // + 0;
 			receivedCode.par ^= 0;
 		}
 		else { 
@@ -204,7 +204,6 @@ void wt440Receiver::interruptHandler() {
 	} else
 	// Channel is 2 bits
 	if (_state < 20) { // 
-		//if (receivedCode.sync != 6) { RESET_STATE; return; }
 		if (duration > max1period) {
 			// We have a 0
 			_state++;
@@ -235,7 +234,8 @@ void wt440Receiver::interruptHandler() {
 	// humidity 7 bits
 	if (_state < 40) { 
 		// If constant not equals 6, do not bother
-		if (receivedCode.wconst != 6) { 
+		if (receivedCode.wconst != 6) {
+			// Serial.print(F("! WH440 batt"));Serial.println(receivedCode.channel); Check later!!!
 			RESET_STATE;
 			return;
 		}
@@ -307,9 +307,14 @@ void wt440Receiver::interruptHandler() {
 			receivedCode.temperature != previousCode.temperature ||
 			receivedCode.humidity != previousCode.humidity ||
 			receivedCode.par != previousCode.par 
-			) { // memcmp isn't deemed safe
+			) { 
 					repeats=0;
 					previousCode = receivedCode;
+					// if below is temporary
+					if (receivedCode.par != previousCode.par){
+						Serial.print(F(" ! WT440 P err C: "));
+						Serial.println(receivedCode.channel);
+					}
 		}
 				
 		repeats++;

@@ -1,7 +1,7 @@
 /*
  * auriol Weather Sensor library v1.3.0 (20150812), M. Westenberg
  * Using parts of framework by Randy Simons http://randysimons.nl/
- * Also thanks to TFD andn others for work on the Auriol protocol.
+ * Also thanks to TFD and others for work on the Auriol protocol.
  * See auriolReceiver.h for details.
  *
  * License: GPLv3. See license.txt
@@ -31,10 +31,10 @@
  * bit 12-23 Temperature	// 12 bits;
  * bit 24-27 <unknown 		// 4 bits; 
  * bit 28-30 <unknown>
- * bit 31-31 CRC check
+ * bit 31-31 Parity check	// 1 bit
  *
  *
- * As far as I can see, every message is sent 6 times, interval is 1 minute between
+ * As far as I can see, every message is sent 6 times, interval is 1 minute between (or less)
  * sending new values from the sensor.
  *
  * PULSE defines 
