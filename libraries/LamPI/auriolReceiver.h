@@ -20,7 +20,7 @@ struct auriolCode {
 	short min2Period;
 	short max2Period;
 #endif
-	//unsigned int period;		// Detected duration in microseconds of 1T in the received signal
+
 	unsigned long address;		// 8 bits Address (house code) of received code. 
 	int temperature;			//12 bits temperature (times 0.1) degrees celcius
 	int humidity;				// Must be 0, not used by this Auriol

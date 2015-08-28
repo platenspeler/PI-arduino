@@ -1,5 +1,7 @@
 /*
- * NewRemoteSwitch library v1.2.0 (20140128) made by Randy Simons http://randysimons.nl/
+ * kakuReceiver.cpp
+ *
+ * based on NewRemoteSwitch library v1.2.0 (20140128) made by Randy Simons http://randysimons.nl/
  * See NewRemoteReceiver.h for details.
  *
  * License: GPLv3. See license.txt
@@ -10,7 +12,7 @@
 #define RESET_STATE _state = -1 // Resets state to initial position.
 
 /************
-* NewRemoteReceiver
+* KakuReceiver
 
 Protocol. (Copied from Wieltje, http://www.circuitsonline.net/forum/view/message/1181410#1181410,
 but with slightly different timings, as measured on my device.)
@@ -36,14 +38,14 @@ A full frame looks like this:
 
 ************/
 
-int8_t NewRemoteReceiver::_interrupt;
-volatile short NewRemoteReceiver::_state;
-byte NewRemoteReceiver::_minRepeats;
-NewRemoteReceiverCallBack NewRemoteReceiver::_callback;
-boolean NewRemoteReceiver::_inCallback = false;
-boolean NewRemoteReceiver::_enabled = false;
+int8_t KakuReceiver::_interrupt;
+volatile short KakuReceiver::_state;
+byte KakuReceiver::_minRepeats;
+KakuReceiverCallBack KakuReceiver::_callback;
+boolean KakuReceiver::_inCallback = false;
+boolean KakuReceiver::_enabled = false;
 
-void NewRemoteReceiver::init(int8_t interrupt, byte minRepeats, NewRemoteReceiverCallBack callback) {
+void KakuReceiver::init(int8_t interrupt, byte minRepeats, KakuReceiverCallBack callback) {
 	_interrupt = interrupt;
 	_minRepeats = minRepeats;
 	_callback = callback;
@@ -53,23 +55,23 @@ void NewRemoteReceiver::init(int8_t interrupt, byte minRepeats, NewRemoteReceive
 	}
 }
 
-void NewRemoteReceiver::enable() {
+void KakuReceiver::enable() {
 	RESET_STATE;
 	_enabled = true;
 }
 
-void NewRemoteReceiver::disable() {
+void KakuReceiver::disable() {
 	_enabled = false;
 }
 
-void NewRemoteReceiver::deinit() {
+void KakuReceiver::deinit() {
 	_enabled = false;
 	if (_interrupt >= 0) {
 		detachInterrupt(_interrupt);
 	}
 }
 
-void NewRemoteReceiver::interruptHandler() {
+void KakuReceiver::interruptHandler() {
 	// This method is written as compact code to keep it fast. While breaking up this method into more
 	// methods would certainly increase the readability, it would also be much slower to execute.
 	// Making calls to other methods is quite expensive on AVR. As These interrupt handlers are called
@@ -80,8 +82,8 @@ void NewRemoteReceiver::interruptHandler() {
 	}
 
 	static byte receivedBit;				// Contains "bit" currently receiving
-	static NewRemoteCode receivedCode;		// Contains received code
-	static NewRemoteCode previousCode;		// Contains previous received code
+	static KakuCode receivedCode;		// Contains received code
+	static KakuCode previousCode;		// Contains previous received code
 	static byte repeats = 0;				// The number of times the an identical code is received in a row.
 	static unsigned long edgeTimeStamp[3] = {0, };	// Timestamp of edges
 	static unsigned int min1Period, max1Period, min5Period, max5Period;
@@ -240,13 +242,13 @@ void NewRemoteReceiver::interruptHandler() {
 				// States 110 - 113 are switch bit states.
 				switch (receivedBit & B1111) {
 					case B0001: // Bit "0" received.
-						receivedCode.switchType = NewRemoteCode::off;
+						receivedCode.switchType = KakuCode::off;
 						break;
 					case B0100: // Bit "1" received. Note: this might turn out to be a on_with_dim signal.
-						receivedCode.switchType = NewRemoteCode::on;
+						receivedCode.switchType = KakuCode::on;
 						break;
 					case B0000: // Bit "dim" received.
-						receivedCode.switchType = NewRemoteCode::dim;
+						receivedCode.switchType = KakuCode::dim;
 						break;
 					default: // Bit was invalid. Abort.
 						RESET_STATE;
@@ -271,7 +273,7 @@ void NewRemoteReceiver::interruptHandler() {
 				
 			} else if (_state < 146) {
 				// States 130 - 145 are dim bit states.
-                // Depending on hardware, these bits can be present, even if switchType is NewRemoteCode::on or NewRemoteCode::off
+                // Depending on hardware, these bits can be present, even if switchType is KakuCode::on or KakuCode::off
 
 				receivedCode.dimLevel <<= 1;
 
@@ -295,7 +297,7 @@ void NewRemoteReceiver::interruptHandler() {
 	return;
 }
 
-boolean NewRemoteReceiver::isReceiving(int waitMillis) {
+boolean KakuReceiver::isReceiving(int waitMillis) {
 	unsigned long startTime=millis();
 
 	int waited; // Signed int!

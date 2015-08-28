@@ -23,11 +23,11 @@
  * 
  * Protocol Info from: ala-paavola.fi
  *
- * bit 00-03 Leader			// 4 bits; 12 B1100
+ * bit 00-03 Leader			// 4 bits; value==12 (0x1100)
  * bit 04-07 Address		// 4 bits;
  * bit 08-09 Channel		// 2 bits;
- * bit 10-12 Constant		// 3 bits; 6 B 110
- * bit 13-20 Humidity		// 7 bits;
+ * bit 10-12 Constant		// 3 bits; value==6 (0x110)
+ * bit 13-20 Humidity		// 7 bits; values can be between 0 and 126
  * bit 21-34 Temperature 	// 15 bits; t = ( t - 6400) * 10 / 128
  * bit 35    Parity			// 1 bits
  *
@@ -182,7 +182,7 @@ void wt440Receiver::interruptHandler() {
 			return;
 		}
 		_state++;
-		receivedCode.sync = receivedCode.sync << 1 + 0;
+		receivedCode.sync = receivedCode.sync << 1; // + 0
 		receivedCode.par ^= 0;
 	} else 
 	// Address is 4 bits, max 8 pulses	
@@ -234,11 +234,11 @@ void wt440Receiver::interruptHandler() {
 	// humidity 7 bits
 	if (_state < 40) { 
 		// If constant not equals 6, do not bother
-		if (receivedCode.wconst != 6) {
-			// Serial.print(F("! WH440 batt"));Serial.println(receivedCode.channel); Check later!!!
-			RESET_STATE;
-			return;
-		}
+		//if (receivedCode.wconst != 6) {
+		//	Serial.print(F("! WH440 batt")); Serial.println(receivedCode.channel); // Check later!!!
+		//	RESET_STATE;
+		//	return;
+		//}
 		if (duration > max1period) {
 			// We have a 0
 			_state++;

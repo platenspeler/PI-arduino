@@ -1,25 +1,41 @@
 /*
-* Code for RF remote 433 Slave Sensor (forwarding sensor reading over 433 to master). 
+* Code for RF remote 433 Repeater (forwarding sensor/receiver reading over 433 to master). 
 *
-* Version 1.6 alpha; 150824
+* Version 1.6 alpha; 150825
 * (c) M. Westenberg (mw12554@hotmail.com)
 *
-* Based on contributions and work of many:
-* 	Randy Simons (Kaku and InterruptChain)
-*	SPC for Livolo
-* 	and others (Wt440) etc.
+* Based on contributions and work of many.
 *
-* Connect sender no pin D8 , SDA to pin A4 and SCL to pin A5
+* Connect
+* - Receiver to pin D2 
+* - Transmitter to pin D8
+* - SDA to pin A4  
+* - SCL to pin A5, 
+* - 1-Wire to pin D10
 */
 
-#include <LamPI.h>
+#include <Arduino.h>
 #include <Wire.h>
-#include "Sensor433.h"
+#include "LamPI.h"
+#include "Repeater433.h"
+
 
 #include <wt440Transmitter.h>
 
+//
+// Receivers (interrupt handling)
+//
+#include <InterruptChain.h>
+//#if S_WT440==1
+#  include <wt440Receiver.h>
+//#endif
+//#if S_AURIOL==1
+#  include <auriolReceiver.h>	// if auriolCode undefined, preprocessor will fail.
+//#endif
 
+//
 // Sensors
+//
 #if S_DALLAS==1
 # include "OneWire.h"
 # include "DallasTemperature.h"
@@ -38,7 +54,9 @@
 #endif
 
 
+//
 // Others
+//
 unsigned long time;
 int debug;
 int  readCnt;				// Character count in buffer
@@ -47,13 +65,15 @@ char readLine[32];			// Buffer of characters read
 int msgCnt;
 unsigned long codecs;		// must be at least 32 bits for 32 positions. Use long instead of array.
 
+
 // Create a transmitter using digital pin 8 to transmit,
 // with a period duration of 260ms (default), repeating the transmitted
 // code 2^3=8 times.
-
+//
 wt440Transmitter wtransmitter(8);
 
 // --------------------------------------------------------------------------------
+// SETUP
 //
 void setup() {
   // As fast as possible for USB bus
@@ -63,6 +83,17 @@ void setup() {
   debug = 1;
   codecs = 0;
   time = millis();
+  InterruptChain::setMode(0, CHANGE);
+  
+#if S_WT440==1
+  wt440Receiver::init(-1, 1, showWt440Code);
+  InterruptChain::addInterruptCallback(0, wt440Receiver::interruptHandler);
+#endif
+#if S_AURIOL==1
+  auriolReceiver::init(-1, 2, showAuriolCode);
+  InterruptChain::addInterruptCallback(0, auriolReceiver::interruptHandler);
+#endif
+
 #if S_DALLAS==1
   Serial.print("DALLAS ");
   sensors.begin();
@@ -75,7 +106,7 @@ void setup() {
   myHumidity.readHumidity();			// First read value after starting does not make sense.  
 #endif									// Avoid this value being sent to raspberry daemon
 #if S_BMP085==1
-  Serial.println("BMP085 ");
+	Serial.println("BMP085 ");
   if (bmp085.Calibration() == 998) Serial.println(F("No bmp085"));	// OnBoard
 #endif
   // Initialize receiver on interrupt 0 (= digital pin 2), calls the callback (for example "showKakuCode")
@@ -90,41 +121,26 @@ void setup() {
 void loop() {
   wt440TxCode msgCode;
 
-
 // HTU21D
 // The htu21d device reports its values of temp and humi as floats.
 //
 #if S_HTU21D==1
 	// HTU21 or SHT21
-	
-	delay(100);
 	float humd = myHumidity.readHumidity();
-	delay(100);
 	float temp = myHumidity.readTemperature();
-	if (((int)temp == 999) || ((int)temp == 998)) {
-		Serial.println(F("HTU temp timeout"));
-	}
 	if (((int)humd != 999) && ((int)humd !=998 )) {	// Timeout (no sensor) or CRC error
+	
+		Serial.print(F("! HTU21D:: A ")); Serial.print(msgCode.address);
+		Serial.print(F(", C ")); Serial.print(msgCode.channel);
+		Serial.print(F(", T ")); Serial.print(msgCode.temp);
+		Serial.print(F(", H ")); Serial.print(msgCode.humi);
 
 		msgCode.address = OWN_ADDRESS;
 		msgCode.channel = 0;				// Fixed for HTU21D if this is a repeater
 		msgCode.humi = humd;
-		msgCode.temp = (unsigned int) (temp * 128) + 6400;
-		msgCode.wcode = 0x6;
+		msgCode.temp = (unsigned int) (temp * 128) + 6400; 
 		wtransmitter.sendMsg(msgCode);
 		
-		Serial.print(F("! HTU21D  Xmit: A ")); Serial.print(msgCode.address);
-		Serial.print(F(", C ")); Serial.print(msgCode.channel);
-		Serial.print(F(", T ")); Serial.print(msgCode.temp);
-		Serial.print(F(", H ")); Serial.print(msgCode.humi);
-		
-		if (debug>=1) {
-		Serial.print(F(";\t\ttemp ")); Serial.print(temp, 1);
-		Serial.print(F(", H ")); Serial.print(humd, 1);	
-		Serial.print(F(", W ")); Serial.print(msgCode.wcode, BIN);
-		}
-		Serial.println();
-
 		msgCnt++;
 	}
 #endif
@@ -141,28 +157,22 @@ void loop() {
 		
 		msgCode.address = OWN_ADDRESS;
 		msgCode.channel = 1;
-		msgCode.humi = pressure/100 - 930;						// pressure coded as special case wt440
+		msgCode.humi = 0;							// pressure not supported;
 		msgCode.temp = (unsigned int) ((temperature * 12.8) + 6400);  // BMP085 gives temperature*10;
-		msgCode.wcode = 0x7;						// Weather code a BMP085 device with airpressure
 		wtransmitter.sendMsg(msgCode);
 		
-		Serial.print(F("! BMP085  Xmit: A ")); Serial.print(msgCode.address);
+		Serial.print(F("! BMP085 Xmit : A ")); Serial.print(msgCode.address);
 		Serial.print(F(", C ")); Serial.print(msgCode.channel);
 		Serial.print(F(", T ")); Serial.print(msgCode.temp);
 		Serial.print(F(", H ")); Serial.print(msgCode.humi);
-		if (debug>=1) {
-			Serial.print(F(";\t\tP ")); Serial.print(pressure/100, 2);
-			Serial.print(F(", T ")); Serial.print((float)(temperature/10), 1);
-			Serial.print(F(", A ")); Serial.print(altitude, 2);
-			Serial.print(F(", W ")); Serial.print(msgCode.wcode, BIN);
-		}
-
-
+		
+		Serial.print(F(";\t\tP ")); Serial.print(pressure, DEC);
+		Serial.print(F(", A ")); Serial.print(altitude, 2);
 		Serial.println();
 	
 		msgCnt++;
 	}
-#endif	
+#endif
 
 #if S_DALLAS==1
 	uint8_t ind;
@@ -179,7 +189,6 @@ void loop() {
 			msgCode.channel = i+2;				// HTU21 is 0, BMP085=1, other sensors start at 2
 			msgCode.humi = 0;
 			msgCode.temp = (unsigned int) (tempC * 128) + 6400; 
-			msgCode.wcode = 0x6;				// Weather code is standard temp/humi
 			wtransmitter.sendMsg(msgCode);
 			
 			if (debug) {
@@ -198,8 +207,8 @@ void loop() {
 					if (tempDeviceAddress[ind] < 16) Serial.print("0");
 					Serial.print(tempDeviceAddress[ind], HEX);
 				}
-				Serial.print(F(" T ")); Serial.print(tempC);
-				Serial.print(F(", W ")); Serial.print(msgCode.wcode, BIN);
+				Serial.print(F(" T "));
+				Serial.print(tempC);
 				Serial.println();
 			}
 			
@@ -208,19 +217,89 @@ void loop() {
 		//else ghost device! Check your power requirements and cabling
 	}
 #endif
-
   delay(62000);				// Wait a second of 60 or so. 
 							// Do not use 60 exactly to avoid all sensors reporting on the same time
 }
 
-
 // ************************* TRANSMITTER PART *************************************
 
+// We use wtransmitter in the sensor function
 
 
 
 // ************************* RECEIVER STUFF BELOW *********************************
 
-// Not present for Slave Sensor node
+// --------------------------------------------------------------------------------
+// WT440
+#if S_WT440==1
+void showWt440Code(wt440Code receivedCode) {
+
+	wt440TxCode msgCode;
+	msgCode.address = receivedCode.address;
+	msgCode.channel = receivedCode.address;
+	msgCode.humi = receivedCode.humidity;
+	msgCode.temp = receivedCode.temperature;
+	
+	wtransmitter.sendMsg(msgCode);
+	
+	if (debug>=1) {
+		Serial.print("! WT440 Xmit:   A "); Serial.print(msgCode.address);
+		Serial.print(", C "); Serial.print(msgCode.channel);
+		Serial.print(", T "); Serial.print(msgCode.temp);
+		Serial.print(", H "); Serial.print(msgCode.humi);
+	
+		Serial.print(F(";\t\tx: ")); Serial.print(receivedCode.wconst);
+		Serial.print(F(", P: ")); Serial.print(receivedCode.par);
+
+# if STATISTICS==1
+		Serial.print(F(", P1: ")); Serial.print(receivedCode.min1Period);
+		Serial.print(F("-")); Serial.print(receivedCode.max1Period);
+		Serial.print(F(", P2: ")); Serial.print(receivedCode.min2Period);
+		Serial.print(F("-")); Serial.print(receivedCode.max2Period);
+# endif
+		Serial.println("");
+	}
+	msgCnt++;
+}
+#endif
+
+// --------------------------------------------------------------------------------
+// AURIOL
+// As the Auriol sensor will be retransmitted as a WT440 Sensor
+// and Auriol address can be larger than the 2-bit WT440 addresses, we need to do a trick.
+// modulus the Auriol address by 10 and take the fractional part...
+//
+#if S_AURIOL==1
+//
+void showAuriolCode(auriolCode receivedCode) {
+
+	wt440TxCode msgCode;
+	msgCode.address = (int)(receivedCode.address % 10);	// Address 138 becomes address 8 !
+	msgCode.channel = receivedCode.channel;
+	msgCode.humi = 0;									// humidity NOT present for Auriol sensor
+	msgCode.temp = (unsigned int) ((receivedCode.temperature * 12.8) + 6400);  // AURIOL gives temperature*10;
+
+	wtransmitter.sendMsg(msgCode);
+	
+	if (debug >= 1) {	
+		Serial.print("! Auriol Xmit:  A "); Serial.print(msgCode.address);
+		Serial.print(", C "); Serial.print(msgCode.channel);
+		Serial.print(", T "); Serial.print(msgCode.temp);
+		Serial.print(", H "); Serial.print(msgCode.humi);
+
+		Serial.print(F(";\t\tCs: ")); Serial.print(receivedCode.csum);
+		Serial.print(F(", N1: ")); Serial.print(receivedCode.n1,BIN);
+		Serial.print(F(", N2: ")); Serial.print(receivedCode.n2,BIN);	
+# if STATISTICS==1
+		Serial.print(F(", P1: ")); Serial.print(receivedCode.min1Period);
+		Serial.print(F("-")); Serial.print(receivedCode.max1Period);
+		Serial.print(F(", P2: ")); Serial.print(receivedCode.min2Period);
+		Serial.print(F("-")); Serial.print(receivedCode.max2Period);
+# endif
+		Serial.println("");
+	}
+	msgCnt++;
+}
+#endif
 
 

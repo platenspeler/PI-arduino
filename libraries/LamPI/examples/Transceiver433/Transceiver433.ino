@@ -15,33 +15,39 @@
 *		Sorry for making the code in this file so messy :-) with #if
 */
 
-// Sensors Include
+// General Include
+//
 #include <Arduino.h>
 #include <Wire.h>
-#include "LamPI.h"		// Set statistics 1 (default), change line in file if no statistics are needed
+#include "LamPI.h"				// Shared Definitions
+#include "Transceiver433.h"		// Transceiver specific definitions
 
 // Transmitters Include
+//
 #include <kakuTransmitter.h>
 #include <RemoteTransmitter.h>
 #include <livoloTransmitter.h>
 #include <kopouTransmitter.h>
-
-// Receivers include
-//#if S_WT440
+//
+// Receivers include. 
+// Some cannot be commented as the preprocessor need the argument type of functions
+// that are defined inside an #if (for unknown reasons)
+//
 #include <wt440Receiver.h>
-//#endif
 #include <kakuReceiver.h>
 #include <livoloReceiver.h>
 #include <RemoteReceiver.h>
-//#if R_KOPOU==1
-#  include <kopouReceiver.h>
-//#endif
+#include <kopouReceiver.h>
 #include <RemoteReceiver.h>
+#include <auriolReceiver.h>		// if auriolCode undefined, preprocessor will fail.
+//
+// Others
+//
+#include <InterruptChain.h>
 
-//#if S_AURIOL==1
-# include <auriolReceiver.h>	// if auriolCode undefined, preprocessor will fail.
-//#endif
-
+//
+// Sensors Include
+//
 #if S_DALLAS==1
 # include "OneWire.h"
 # include "DallasTemperature.h"
@@ -53,11 +59,9 @@
 # include "bmp085.h"
 #endif
 
-// Others
-#include <InterruptChain.h>
 
 unsigned long time;			// fill up with millis();
-int debug;
+boolean debug;
 int  readCnt;				// Character count in buffer
 char readChar;				// Last character read from tty
 char readLine[32];			// Buffer of characters read
@@ -99,9 +103,11 @@ void setup() {
   // Initialize receiver on interrupt 0 (= digital pin 2), calls the callback (for example "showKakuCode")
   // after 2 identical codes have been received in a row. (thus, keep the button pressed for a moment)
 
-  NewRemoteReceiver::init(-1, 2, showKakuCode);
+  KakuReceiver::init(-1, 2, showKakuCode);
   RemoteReceiver::init(-1, 2, showRemoteCode);
+#if R_LIVOLO
   livoloReceiver::init(-1, 3, showLivoloCode);
+#endif
 #if R_KOPOU==1
   kopouReceiver::init(-1, 3, showKopouCode);
 #endif
@@ -125,7 +131,7 @@ void setup() {
   InterruptChain::addInterruptCallback(0, auriolReceiver::interruptHandler); onCodec(16 + AURIOL);
 #endif
   InterruptChain::addInterruptCallback(0, RemoteReceiver::interruptHandler); onCodec(ACTION);
-  InterruptChain::addInterruptCallback(0, NewRemoteReceiver::interruptHandler); onCodec(KAKU);
+  InterruptChain::addInterruptCallback(0, KakuReceiver::interruptHandler); onCodec(KAKU);
   InterruptChain::addInterruptCallback(0, livoloReceiver::interruptHandler); onCodec(LIVOLO);
 #if R_KOPOU==1
   InterruptChain::addInterruptCallback(0, kopouReceiver::interruptHandler);	onCodec(KOPOU);
@@ -368,7 +374,7 @@ void parseKaku(char *pch)
   int group;
   int unit;
   int level;
-  NewRemoteTransmitter transmitter(8, 260, 3);
+  KakuTransmitter transmitter(8, 260, 3);
   pch = strtok (NULL, " ,."); group = atoi(pch);
   pch = strtok (NULL, " ,."); unit = atoi(pch);  
   pch = strtok (NULL, " ,."); level = atoi(pch);
@@ -437,17 +443,20 @@ void showWt440Code(wt440Code receivedCode) {
 	
 	Serial.print(F("< "));
 	Serial.print(msgCnt);
-	Serial.print(F(" 3 1 "));
+	if (receivedCode.wconst == 0x6)
+		Serial.print(F(" 3 1 "));					// Normal WT440 message format with Humidity
+	else 
+		Serial.print(F(" 3 2 "));					// BMP085 and BMP180 mis-use
 	Serial.print(receivedCode.address);
 	Serial.print(" ");
 	Serial.print(receivedCode.channel);
 	Serial.print(" ");
 	Serial.print(receivedCode.temperature);
 	Serial.print(" ");
-	Serial.print(receivedCode.humidity);
+	Serial.print(receivedCode.humidity);			// Can be misused as airpressure is wconst == B111 (7)
 
 	if (debug >= 1) {
-		Serial.print(F(" ! WT440:: x: ")); Serial.print(receivedCode.wconst);
+		Serial.print(F(" ! WT440:: W: ")); Serial.print(receivedCode.wconst);
 		Serial.print(F(", P: ")); Serial.print(receivedCode.par);
 # if STATISTICS==1
 		Serial.print(F(", P1: ")); Serial.print(receivedCode.min1Period);
@@ -500,7 +509,7 @@ void showAuriolCode(auriolCode receivedCode) {
 // KAKU
 // Callback function is called only when a valid code is received.
 //
-void showKakuCode(NewRemoteCode receivedCode) {
+void showKakuCode(KakuCode receivedCode) {
 
   // Print the received code. 2 for received codes and 0 for codec of Kaku
   Serial.print(F("< "));
@@ -518,13 +527,13 @@ void showKakuCode(NewRemoteCode receivedCode) {
   }
   
   switch (receivedCode.switchType) {
-    case NewRemoteCode::off:
+    case KakuCode::off:
       Serial.print(F(" 0"));
       break;
-    case NewRemoteCode::on:
+    case KakuCode::on:
       Serial.print(F(" on"));
       break;
-    case NewRemoteCode::dim:
+    case KakuCode::dim:
       // Serial.print(F(" dim "));
 	  if (receivedCode.dimLevelPresent) {
 		Serial.print(F(" "));

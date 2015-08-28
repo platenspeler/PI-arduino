@@ -1,17 +1,18 @@
 /*
- * NewRemoteSwitch library v1.2.0 (20140128) made by Randy Simons http://randysimons.nl/
+ * kakuTransmitter.h
+ * Based on NewRemoteSwitch library v1.2.0 (20140128) made by Randy Simons http://randysimons.nl/
  *
  * License: GPLv3. See license.txt
  */
 
-#ifndef NewRemoteTransmitter_h
-#define NewRemoteTransmitter_h
+#ifndef KakuTransmitter_h
+#define KakuTransmitter_h
 
 #include <Arduino.h>
 #include "LamPI.h"
 
 /**
-* NewRemoteTransmitter provides a generic class for simulation of common RF remote controls, like the A-series
+* KakuTransmitter provides a generic class for simulation of common RF remote controls, like the A-series
 * 'Klik aan Klik uit'-system (http://www.klikaanklikuit.nl/), used to remotely switch lights etc.
 *
 * This class is meant for new-style remotes, usually accompanied by receivers with "code learning"
@@ -28,7 +29,7 @@
 * - You can copy the address of your "real" remotes, so you won't have to learn new codes into the receivers.
 *   In effect this duplicates a remote. But you can also pick a random number in the range 0..2^26-1.
 */
-class NewRemoteTransmitter {
+class KakuTransmitter {
 	public:
 		/**
 		* Constructor.
@@ -41,7 +42,7 @@ class NewRemoteTransmitter {
 		* @param periodusec	Duration of one period, in microseconds. One bit takes 8 periods (but only 4 for 'dim' signal).
 		* @param repeats	[0..8] The 2log-Number of times the signal is repeated. The actual number of repeats will be 2^repeats. 2 would be bare minimum, 4 seems robust, 8 is maximum (and overkill).
 		*/
-		NewRemoteTransmitter(byte pin, unsigned int periodusec = 260, byte repeats = 4);
+		KakuTransmitter(byte pin, unsigned int periodusec = 260, byte repeats = 4);
 
 		/**
 		 * Send on/off command to the address group.

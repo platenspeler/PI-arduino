@@ -47,24 +47,13 @@ wt440Transmitter::wt440Transmitter(byte pin)
  * sending new values from the sensor.
 */
 
-void wt440Transmitter::sendMsg(wt440Code msgCode) {
+void wt440Transmitter::sendMsg(wt440TxCode msgCode) {
   unsigned int temp, humi;
-//  Serial.print("tx: a:");
-//  Serial.print(msgCode.address);
-//  Serial.print(" c:");
-//  Serial.print(msgCode.channel);
-//  Serial.print(" t:");
-//  Serial.print(msgCode.temp);
-//  Serial.print(" h:");
-//  Serial.print(msgCode.humi);
-//  Serial.println("");
-    
-  temp = (unsigned int) (msgCode.temp * 128) +6400 ;
-  humi = (unsigned int) msgCode.humi;
   
-  for (pulse= 0; pulse <= 2; pulse = pulse+1) { // how many times to transmit a command
+  // Retransmit 3 times to transmit a command
+  for (pulse= 0; pulse <= 2; pulse = pulse+1) {
 	byte par = 0;
-  	high = false;	// XXX first pulse is always high
+  	high = false;	// XXX first pulse is always low-high
 	
 	selectPulse(1); // Start  
 	selectPulse(1); // Start
@@ -83,37 +72,30 @@ void wt440Transmitter::sendMsg(wt440Code msgCode) {
 		selectPulse(txPulse);    
 	}
 	
+	for (i = 3; i>0; i--) { // transmit wcode of 3 bits
+		byte txPulse=bitRead(msgCode.wcode, i-1); // read bits from keycode
+		par ^= txPulse;
+		selectPulse(txPulse);    
+	}
 	// Assume parity does not change with 2 1-bit values
-	selectPulse(1); // Wconst 
-	selectPulse(1); // Wconst
-	selectPulse(0); // Wconst
+	//selectPulse(1); // Wconst 
+	//selectPulse(1); // Wconst
+	//selectPulse(0); // Wconst
 	
-	for (i = 7; i>0; i--) { // transmit temp of 8 bits
-		byte txPulse=bitRead(humi, i-1); // read bits from keycode
+	for (i = 7; i>0; i--) { // transmit humi of 8 bits
+		byte txPulse=bitRead(msgCode.humi, i-1); // read bits from keycode
 		par ^= txPulse;
 		selectPulse(txPulse);    
 	}
 	
 	for (i = 15; i>0; i--) { // transmit temp of 8 bits
-		byte txPulse=bitRead(temp, i-1); // read bits from keycode
+		byte txPulse=bitRead(msgCode.temp, i-1); // read bits from keycode
 		par ^= txPulse;
 		selectPulse(txPulse);    
 	}
-	
 	selectPulse((byte)par);
-	
-	Serial.print("tx: a:");
-    Serial.print(msgCode.address);
-    Serial.print(" c:");
-    Serial.print(msgCode.channel);
-    Serial.print(" t:");
-    Serial.print(temp);
-    Serial.print(" h:");
-    Serial.print(humi);
-    Serial.println("");
-	delay(100);
+	delay(50);							// Avoid receiver pick up transmission
   }
-  
   digitalWrite(txPin, LOW);
 }
 

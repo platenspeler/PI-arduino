@@ -11,19 +11,19 @@
 #include "LamPI.h"
 
 // Define what we are going to send. It does NOT fit in a long so make it a struct
-struct wt440Code {
-		byte address;
-		byte channel;
-		float temp;
-		float humi;
+struct wt440TxCode {
+	byte address;
+	byte channel;
+	byte humi;
+	byte wcode;				// Normally a const with value == 0x110 == 6
+	unsigned int temp;
 };
-
 
 class wt440Transmitter
 {
   public:
     wt440Transmitter(byte pin);
-    void sendMsg(wt440Code msgCode);
+    void sendMsg(wt440TxCode msgCode);
   private:
     byte txPin;
 	byte i; // just a counter
