@@ -20,13 +20,13 @@
 *  __
 * |  |__| T + T is a 0 bit
 *
-*  ____
-* |    | 3T is a 1 bit
+*  _______
+* |       | 3T is a 1 bit
 * 
 * Every message starts with a start pulse of 520 uSec
 *
-* There are 16 bits address pulses: 140+260 for a 0-bit and 260+140 for 1-bit
-* And there are 8 bits for Device id: 140+260 or 260+140 uSecs
+* There are 16 bits address pulses: 140+140 for a 0-bit and 300 for 1-bit
+* And there are 8 bits for Device id: 140+140 or 300 uSecs
 *
 * Each bit is approx 300 USec long, either 140+140 or 280
 * 1 start pulse

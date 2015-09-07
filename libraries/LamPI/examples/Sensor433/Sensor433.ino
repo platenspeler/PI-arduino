@@ -1,5 +1,5 @@
 /*
-* Code for RF remote 433 Slave Sensor (forwarding sensor reading over 433 to master). 
+* Code for RF remote 433 Slave Sensor (forwarding sensor reading over the air 433MHz to master). 
 *
 * Version 1.6 alpha; 150824
 * (c) M. Westenberg (mw12554@hotmail.com)
@@ -12,7 +12,8 @@
 * Connect sender no pin D8 , SDA to pin A4 and SCL to pin A5
 */
 
-#include <LamPI.h>
+#include <Arduino.h>
+#include "LamPI.h"
 #include <Wire.h>
 #include "Sensor433.h"
 
@@ -216,7 +217,7 @@ void loop() {
 
 // ************************* TRANSMITTER PART *************************************
 
-
+// Not used in Sensor Mode
 
 
 // ************************* RECEIVER STUFF BELOW *********************************
