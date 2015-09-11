@@ -29,3 +29,4 @@
 #define S_HTU21D 1
 #define S_WT440 1
 #define S_AURIOL 1
+#define S_BH1750 1

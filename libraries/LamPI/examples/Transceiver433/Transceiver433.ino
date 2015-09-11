@@ -58,7 +58,9 @@
 #if S_BMP085==1
 # include "bmp085.h"
 #endif
-
+#if S_BH1750==1
+# include "BH1750FVI.h"
+#endif
 
 unsigned long time;			// fill up with millis();
 boolean debug;
@@ -88,6 +90,9 @@ unsigned long codecs;		// must be at least 32 bits for 32 positions. Use long in
 #endif
 #if S_BMP085==1
   BMP085 bmp085;
+#endif
+#if S_BH1750==1
+  BH1750FVI LightSensor;
 #endif
 
 // --------------------------------------------------------------------------------
@@ -154,6 +159,11 @@ void setup() {
 #if S_BMP085==1
   bmp085.begin(); onCodec(16 + ONBOARD);
   if (bmp085.Calibration() == 998) Serial.println(F("No bmp085"));	// OnBoard
+#endif
+#if S_BH1750==1
+  LightSensor.begin();
+  LightSensor.SetAddress(Device_Address_H);//Address 0x5C
+  LightSensor.SetMode(Continuous_H_resolution_Mode2);
 #endif
 }
 
@@ -264,7 +274,7 @@ void readSensors() {
 			float altitude = (float)44330 * (1 - pow(((float) pressure/bmp085.p0), 0.190295));
 			Serial.print(F("< "));
 			Serial.print(msgCnt);
-			Serial.print(F(" 3 0 77 0 "));		// Address bus 77, channel 0
+			Serial.print(F(" 3 0 77 0 "));					// Address bus 77, channel 0
 			Serial.print(temperature, DEC);
 			Serial.print(F(" "));
 			Serial.print(pressure, DEC);
@@ -273,6 +283,20 @@ void readSensors() {
 			Serial.println();
 			msgCnt++;
 		}
+#endif
+#if S_BH1750==1
+		uint16_t lux = LightSensor.GetLightIntensity();		// Get Lux value
+		Serial.print(F("< "));
+		Serial.print(msgCnt);
+		Serial.print(F(" 3 0 23 0 "));						// Address 23 or 5C
+		Serial.print(lux);
+		if (debug>=1) {
+		Serial.print(F(" ! Light: "));
+		Serial.print(lux);
+		Serial.print(F(" lux"));
+		}
+		Serial.println();
+		msgCnt++;
 #endif
 	}
 }
