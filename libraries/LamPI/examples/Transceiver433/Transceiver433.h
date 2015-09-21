@@ -1,6 +1,6 @@
 //
 // Author: Maarten Westenberg
-// Version: 1.6
+// Version: 1.7
 // Date: 2015-08-25
 //
 // This file contains a number of compile-time settings that can be set on (=1) or off (=0)

@@ -1,7 +1,7 @@
 /*
 * Code for RF remote switch Gateway. 
 *
-* Version 1.6 beta; 150823
+* Version 1.7; 150912
 * (c) M. Westenberg (mw12554@hotmail.com)
 *
 * Based on contributions and work of many:
@@ -224,11 +224,7 @@ void readSensors() {
 			// Search the wire for address
 			if(sensors.getAddress(tempDeviceAddress, i))
 			{
-				// Output the device ID
-				if (debug) {
-					Serial.print("! Temperature for device: ");
-					Serial.println(i, DEC);
-				}
+				
 				
 				Serial.print(F("< "));
 				Serial.print(msgCnt);
@@ -247,16 +243,24 @@ void readSensors() {
 				// It responds almost immediately. Let's print out the data
 				float tempC = sensors.getTempC(tempDeviceAddress);
 				Serial.print(tempC,1);
-				Serial.println(F(" 0"));					// No Humidity, make 0
+				Serial.print(F(" 0"));					// No Humidity, make 0
+				
+				// Output the device ID
+				if (debug) {
+					Serial.print(" ! ds18b20 dev ");
+					Serial.print(i, DEC);
+				}
+				Serial.println();
 			} 
 			//else ghost device! Check your power requirements and cabling
 		}
 #endif
 #if S_HTU21D==1
 		// HTU21 or SHT21
+		//delay(100);
 		float humd = myHumidity.readHumidity();
 		float temp = myHumidity.readTemperature();
-		if (((int)humd != 999) && ((int)humd !=998 )) {	// Timeout (no sensor) or CRC error
+		if (((int)humd != 999) && ((int)humd != 998 )) {	// Timeout (no sensor) or CRC error
 			Serial.print(F("< "));
 			Serial.print(msgCnt);
 			Serial.print(F(" 3 0 40 0 "));		// Address bus 40, channel 0
@@ -280,6 +284,10 @@ void readSensors() {
 			Serial.print(pressure, DEC);
 			Serial.print(F(" "));
 			Serial.print(altitude, 2);
+			if (debug>=1) {
+			Serial.print(F(" ! bmp: t: "));
+			Serial.print((float)(temperature/10), 1);
+			}
 			Serial.println();
 			msgCnt++;
 		}
@@ -291,7 +299,7 @@ void readSensors() {
 		Serial.print(F(" 3 0 23 0 "));						// Address 23 or 5C
 		Serial.print(lux);
 		if (debug>=1) {
-		Serial.print(F(" ! Light: "));
+		Serial.print(F(" ! Lumi: "));
 		Serial.print(lux);
 		Serial.print(F(" lux"));
 		}
@@ -347,13 +355,13 @@ void parseCmd(char *readLine)
 		break;
 		case 3:	// Debug level
 			pch = strtok (NULL, " ,."); debug = atoi(pch);
-			if (debug > 2) { debug = 1; } else if (debug < 0) { debug = 0; }
+			if (debug >= 1) { debug = 1; } else { debug = 0; }
 			
 			Serial.print(F("< "));
 			Serial.print(msgCnt);
 			Serial.print(F(" 0 3 "));
 			Serial.print(debug);
-			if (debug) Serial.print(F(" ! Debug"));
+			if (debug) Serial.print(F(" ! Debug ON"));
 			Serial.println("");
 			msgCnt++;
 		break;

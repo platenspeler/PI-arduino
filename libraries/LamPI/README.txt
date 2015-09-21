@@ -9,4 +9,12 @@ Trying to combine the functionality of two libraries:
 At first, we'l concentrate on Kaku Messages.
 If room permits on the Arduino, we'll look at other protocols as well.
 
+Contributions:
+
+- Randy Simons, for Kaku lib and receier interrupt handling
+- Nathan Seidle, for HTU21d library 
+- Jim Lindblom, for BMP085 code and examples
+- SPC, for Livolo work
+
+
 Maarten (mw12554 @ hotmail . com )

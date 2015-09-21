@@ -77,7 +77,7 @@ void wt440Transmitter::sendMsg(wt440TxCode msgCode) {
 		par ^= txPulse;
 		selectPulse(txPulse);    
 	}
-	// Assume parity does not change with 2 1-bit values
+	// Assume parity does not change with 2 1-bit values, make const flexible to code BMP085 code
 	//selectPulse(1); // Wconst 
 	//selectPulse(1); // Wconst
 	//selectPulse(0); // Wconst
