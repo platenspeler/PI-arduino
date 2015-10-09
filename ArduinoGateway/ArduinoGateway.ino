@@ -20,8 +20,8 @@
 //
 #include <Arduino.h>
 #include <Wire.h>
-#include "LamPI.h"				// Shared Definitions
-#include "Transceiver433.h"		// Transceiver specific definitions
+#include "LamPI.h"				// Shared Definitions, such as PIN definitions
+#include "ArduinoGateway.h"		// Transceiver specific definitions
 
 // Transmitters Include
 // Be careful not to include transmitters that initialize structures in their .h file
@@ -74,12 +74,6 @@ char readChar;				// Last character read from tty
 char readLine[32];			// Buffer of characters read
 int msgCnt;
 unsigned long codecs;		// must be at least 32 bits for 32 positions. Use long instead of array.
-
-// Create a transmitter using digital pin 8 to transmit,
-// with a period duration of 260ms (default), repeating the transmitted
-// code 2^3=8 times.
-
-
 //Kopou kopou(8);			// No function or transmitting Kopou yet (not needed)
 
 
@@ -109,6 +103,11 @@ void setup() {
   readCnt = 0;
   debug = 0;
   codecs = 0;
+
+  // Create a transmitter using digital pin S_TRANSMITTER (default is 8) to transmit,
+  // with a period duration of 260ms (default), repeating the transmitted
+  // code 2^3=8 times.
+  digitalWrite(S_TRANSMITTER, LOW);
 
   // Initialize receiver on interrupt 0 (= digital pin 2), calls the callback (for example "showKakuCode")
   // after 2 identical codes have been received in a row. (thus, keep the button pressed for a moment)

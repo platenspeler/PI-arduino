@@ -5,7 +5,7 @@
 //
 
 // What is the Epic address that we should use for this Sensor
-#define OWN_ADDRESS 8
+#define OWN_ADDRESS 5
 
 // If you enable this setting, in debug mode all kind off
 // min/max timers will be displayed
@@ -17,3 +17,4 @@
 #define S_BMP085 1
 #define S_HTU21D 1
 #define S_BH1750 1
+#define S_PIR 1
