@@ -61,7 +61,7 @@ void RemoteTransmitter::sendCode(byte pin, unsigned long code, unsigned int peri
 	// Also note this swaps endianess in the process. The MSB must be transmitted first, but is converted to
 	// LSB here. This is easier when actually transmitting later on.
 	unsigned long dataBase4 = 0;
-
+	
 	for (byte i=0; i<12; i++) {
 		dataBase4<<=2;
 		dataBase4|=(code%3);
@@ -146,7 +146,7 @@ unsigned long ActionTransmitter::getTelegram(byte systemCode, char device, boole
 
 	for (byte i=0; i<5; i++) {
 		// Trits 0-4 contain address (2^5=32 addresses)
-		trits[i]=(systemCode & 1)?1:2;
+		trits[4-i]=(systemCode & 1)?1:2;
 		systemCode>>=1;
 
 		// Trits 5-9 contain device. Only one trit has value 0, others have 2 (float)!

@@ -1,10 +1,10 @@
 /*
   quhwaTransmitter.cpp - Library for Quhwa wireless doorbells.
   Author: M. Westenberg
-  Version: 1.7
-  Date: Sep 23, 2015
+  Version: 1.7.2
+  Date: Oct 13, 2015
   
-  Released into the public domain. Looks like Livolo transmitter
+  Released into the public domain. Is similar to Livolo transmitter
   
 */
 
@@ -18,7 +18,7 @@ Quhwa::Quhwa(byte pin)
 }
 
 //
-// 
+// Send the code (multiple times) for the Bell Button
 
 void Quhwa::sendButton(unsigned long remoteID, byte keycode) {
   Serial.println();
@@ -26,10 +26,10 @@ void Quhwa::sendButton(unsigned long remoteID, byte keycode) {
   Serial.print(remoteID);
   Serial.print(", u: ");
   Serial.println(keycode);
-  
-  for (pulse= 0; pulse <= 20; pulse++) { // how many times to transmit a command
-    sendPulse(1); // Start  
-    high = true;	// first pulse is always low
+  // how many times to transmit a command
+  for (pulse= 0; pulse <= 25; pulse++) { 
+    sendPulse(1); 	// Start  
+    high = true;	// first pulse is always high
 
     for (i = 27; i>0; i--) { // transmit remoteID
 		byte txPulse=bitRead(remoteID, i-1); // read bits from remote ID
@@ -52,7 +52,6 @@ void Quhwa::sendButton(unsigned long remoteID, byte keycode) {
 // build transmit sequence so that every high pulse is followed by low and vice versa
 
 void Quhwa::selectPulse(byte inBit) {
-  
     switch (inBit) {
       case 0: 
         if (high == true) {		// if current pulse should be high, send High Zero
@@ -77,7 +76,6 @@ void Quhwa::selectPulse(byte inBit) {
 // slightly corrected pulse length, use old (commented out) values if these not working for you
 
 void Quhwa::sendPulse(byte txPulse) {
-
   switch(txPulse) { // transmit pulse
    case 1:							// Start
    digitalWrite(txPin, HIGH);
@@ -90,12 +88,12 @@ void Quhwa::sendPulse(byte txPulse) {
    digitalWrite(txPin, LOW);
    delayMicroseconds(350); 			// 350
    digitalWrite(txPin, HIGH);
-   break;   
+   break;
    case 3:							// "Low One"
    digitalWrite(txPin, LOW);
    delayMicroseconds(1050); 		// 1050
    digitalWrite(txPin, HIGH);
-   break;      
+   break;
    case 4:							// "High Zero"
    digitalWrite(txPin, HIGH);
    delayMicroseconds(350); 			// 350

@@ -1,13 +1,10 @@
+// #include <avr/power.h>
 /*
 * Code for RF remote 433 Slave Sensor (forwarding sensor reading over the air 433MHz to master). 
 *
-* Version 1.7 alpha; 150824
+* Version 1.7.2; 151015
 * (c) M. Westenberg (mw12554@hotmail.com)
 *
-* Based on contributions and work of many:
-* 	Randy Simons (Kaku and InterruptChain)
-*	SPC for Livolo
-* 	and others (Wt440) etc.
 *
 * Connect sender no pin D8 , SDA to pin A4 and SCL to pin A5
 */
@@ -40,6 +37,10 @@
   BMP085 bmp085;
 #endif
 
+#if S_BATTERY==1
+	int batteryPrevValue;	// Keep track of previous value and 
+							// ONLY send a message once the battery value changes!
+#endif
 
 // Others
 unsigned long time;
@@ -47,7 +48,7 @@ int debug;
 int readCnt;				// Character count in buffer
 char readChar;				// Last character read from tty
 char readLine[32];			// Buffer of characters read
-int msgCnt;
+unsigned int msgCnt;
 unsigned long codecs;		// must be at least 32 bits for 32 positions. Use long instead of array.
 
 // Create a transmitter using digital pin 8 to transmit,
@@ -59,6 +60,7 @@ wt440Transmitter wtransmitter(8);
 // --------------------------------------------------------------------------------
 //
 void setup() {
+  // if (F_CPU == 16000000) clock_prescale_set(clock_div_1);	// No effect
   
   Serial.begin(115200);					// As fast as possible for USB bus
   msgCnt = 0;
@@ -67,22 +69,33 @@ void setup() {
   codecs = 0;
   time = millis();
   
+  digitalWrite(S_TRANSMITTER, LOW);
+  
 #if S_DALLAS==1
-	Serial.print("DALLAS #:");
 	sensors.begin();
 	numberOfDevices = sensors.getDeviceCount();
-	Serial.print(numberOfDevices); Serial.println(" ");
+	if (debug>=1) {
+		Serial.print("DALLAS #:");
+		Serial.print(numberOfDevices); 
+		Serial.println(" ");
+	}
 #endif
 
 #if S_HTU21D==1
-	Serial.println("HTU21D ");
+	if (debug>=1) Serial.println("HTU21D ");
 	myHumidity.begin();
 	myHumidity.readHumidity();			// First read value after starting does not make sense.  
 #endif
 
 #if S_BMP085==1
-	Serial.println("BMP085 ");
+	if (debug>=1) Serial.println("BMP085 ");
 	if (bmp085.Calibration() == 998) Serial.println(F("No bmp085"));	// OnBoard
+#endif
+
+#if S_BATTERY
+   // use the 1.1 V internal reference
+   analogReference(INTERNAL);
+   batteryPrevValue = 0;
 #endif
 
   // Initialize receiver on interrupt 0 (= digital pin 2), calls the callback (for example "showKakuCode")
@@ -97,22 +110,25 @@ void setup() {
 void loop() {
   wt440TxCode msgCode;
 
-
 // HTU21D
 // The htu21d device reports its values of temp and humi as floats.
 //
 #if S_HTU21D==1
 	// HTU21 or SHT21
 	
-	delay(100);
+	//delay(50);
 	float humd = myHumidity.readHumidity();
-	delay(100);
 	float temp = myHumidity.readTemperature();
-	if (((int)temp == 999) || ((int)temp == 998)) {
-		Serial.println(F("HTU temp timeout"));
+	if (((int)temp == 999) || ((int)temp == 998)) { // 998 is timeout, 999 crc
+		Serial.print(F("HTU temp error "));
+		Serial.println(temp);
 	}
-	if (((int)humd != 999) && ((int)humd !=998 )) {	// Timeout (no sensor) or CRC error
-
+	else
+	if (((int)humd == 999) || ((int)humd == 998 )) {	// Timeout (no sensor) or CRC error
+		Serial.print(F("HTU humi error "));
+		Serial.println(humd);
+	}
+	else {
 		msgCode.address = OWN_ADDRESS;
 		msgCode.channel = 0;				// Fixed for HTU21D if this is a repeater
 		msgCode.humi = humd;
@@ -184,7 +200,6 @@ void loop() {
 		if(sensors.getAddress(tempDeviceAddress, i))
 		{
 			float tempC = sensors.getTempC(tempDeviceAddress);
-			
 			msgCode.address = OWN_ADDRESS;
 			msgCode.channel = i+2;				// HTU21 is 0, BMP085=1, other sensors start at 2
 			msgCode.humi = 0;
@@ -192,7 +207,7 @@ void loop() {
 			msgCode.wcode = 0x6;				// Weather code is standard temp/humi
 			wtransmitter.sendMsg(msgCode);
 			
-			if (debug) {
+			if (debug>=1) {
 				Serial.print("! DS18b20 Xmit: A "); Serial.print(msgCode.address);
 				Serial.print(", C "); Serial.print(msgCode.channel);
 				Serial.print(", T "); Serial.print(msgCode.temp);
@@ -201,16 +216,18 @@ void loop() {
 				Serial.print(F(";\t\tid "));
 				// Address bus is tempDeviceAddress, channel 0
 				// For LamPI, print in different format compatible with WiringPI
-				for (uint8_t j= 0; j < 7; j++)				// Skip int[7], this is CRC
+				for (uint8_t j=0; j < 7; j++)				// Skip int[7], this is CRC
 				{
 					if (j<1) ind=j; else ind=7-j;
 					if (j==1) Serial.print("-");
 					if (tempDeviceAddress[ind] < 16) Serial.print("0");
 					Serial.print(tempDeviceAddress[ind], HEX);
 				}
-				Serial.print(F(" T ")); Serial.print(tempC);
-				Serial.print(F(", W ")); Serial.print(msgCode.wcode, BIN);
-				Serial.println();
+				Serial.print(F(" T ")); 
+				Serial.print(tempC, 1);
+				// Serial.print(F(", W ")); 
+				// Serial.print(msgCode.wcode, BIN);
+				Serial.println("");
 			}
 			
 			msgCnt++;
@@ -219,7 +236,41 @@ void loop() {
 	}
 #endif
 
+  if (debug >= 1) {
+	delay(100);							// NEEEDED to avoid LowPower to disable UART too early
+  }
+  // Wait between reading the sensors and reading battery
+  // to avoid battery reading fluctuate every reading
+  LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
+  
+#if S_BATTERY==1
+  int batteryValue = analogRead(BATTERY_PIN);
+  float batteryVoltage  = batteryValue * 4.45 / 1023;
+  if (batteryValue != batteryPrevValue) {
+	// Battery value changed, so send a message
+	msgCode.address = OWN_ADDRESS;
+	// msgCode.channel = 0;				// Must be used by one of the sensors above
+	msgCode.humi = 0;
+	msgCode.temp = (unsigned int) (batteryValue);
+	msgCode.wcode = 0x4;				// Use a this free code for the battery
+	wtransmitter.sendMsg(msgCode);
+	//batteryPrevValue = batteryValue;
+  }
+  if (debug >= 1) {
+	Serial.print("Battery: ");
+	Serial.print(batteryValue);
+	Serial.print(", V: ");
+	Serial.println(batteryVoltage);
+  } 
+#endif
+
+  if (debug >= 1) {
+	delay(100);							// NEEEDED to avoid LowPower to disable UART too early
+  }
+
   // Do not use 60 seconds exactly to avoid all sensors reporting on the same time
+  LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
+  LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
   LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
   LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
   LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
@@ -227,14 +278,5 @@ void loop() {
   LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
 }
 
-
-// ************************* TRANSMITTER PART *************************************
-
-// Not used in Sensor Mode
-
-
-// ************************* RECEIVER STUFF BELOW *********************************
-
-// Not present for Slave Sensor node
 
 

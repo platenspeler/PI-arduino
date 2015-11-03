@@ -12,7 +12,7 @@
 #include <Wire.h>
 #include <bmp085.h>
 
-#define BMP085_ADDRESS 0x77  // I2C address of BMP085
+#define BMP085_ADDRESS 0x77	// I2C address of BMP085
 
 const unsigned char OSS = 0;  // Oversampling Setting
 

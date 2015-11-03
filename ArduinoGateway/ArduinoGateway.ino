@@ -1,8 +1,6 @@
 /*
 * Code for RF remote switch Gateway. 
 *
-* Version 1.7
-* Date: 150912
 * (c) M. Westenberg (mw12554@hotmail.com)
 *
 * Based on contributions and work of many:
@@ -15,6 +13,11 @@
 * NOTE: You can enable/disable modules in the LamPI.h file
 *		Sorry for making the code in this file so messy :-) with #if
 */
+
+// Please look at http://platenspeler.github.io/HardwareGuide/Arduino-Gateway/gatewayMsgFormat.html
+// for definitions of the message format for the Arduino Gateway.
+// Command "> 111 0 4" will output the version of the Gateway software
+#define VERSION " ! V. 1.7.4, 151104"
 
 // General Include
 //
@@ -72,9 +75,13 @@ boolean debug;
 int  readCnt;				// Character count in buffer
 char readChar;				// Last character read from tty
 char readLine[32];			// Buffer of characters read
-int msgCnt;
+unsigned int msgCnt;		// Not unique, as at some time number will wrap.
+
+// Use a bit array (coded in long) to keep track of what protocol is enabled.
+// Best is to make this dynamic and not compile time. However,only the Arduino Mega has enough memory
+// to run all codecs with all their declarations without problems.
+//
 unsigned long codecs;		// must be at least 32 bits for 32 positions. Use long instead of array.
-//Kopou kopou(8);			// No function or transmitting Kopou yet (not needed)
 
 
 // Sensors Declarations
@@ -136,44 +143,51 @@ void setup() {
   // Define the interrupt chain
   // The sequence might be relevant, defines the order of execution, put easy protocols first
   // onCodec: First 16 bits are for sensors (+16), last 16 bits for devices,
-  // By removing a line below, that type of device will not be scanned anymore :-)  
+  // By removing a line below, that type of device will not be scanned anymore :-)
   //
 
 #if S_AURIOL==1
-  InterruptChain::addInterruptCallback(0, auriolReceiver::interruptHandler); onCodec(16 + AURIOL);
+  InterruptChain::addInterruptCallback(0, auriolReceiver::interruptHandler); onCodec(AURIOL);
 #endif
   InterruptChain::addInterruptCallback(0, RemoteReceiver::interruptHandler); onCodec(ACTION);
-  InterruptChain::addInterruptCallback(0, KakuReceiver::interruptHandler); onCodec(KAKU);
+  InterruptChain::addInterruptCallback(0, KakuReceiver::interruptHandler);   onCodec(KAKU);
   InterruptChain::addInterruptCallback(0, livoloReceiver::interruptHandler); onCodec(LIVOLO);
 #if R_KOPOU==1
-  InterruptChain::addInterruptCallback(0, kopouReceiver::interruptHandler);	onCodec(KOPOU);
+  InterruptChain::addInterruptCallback(0, kopouReceiver::interruptHandler);	 onCodec(KOPOU);
 #endif
 #if R_QUHWA==1
-  InterruptChain::addInterruptCallback(0, quhwaReceiver::interruptHandler);	onCodec(QUHWA);
+  InterruptChain::addInterruptCallback(0, quhwaReceiver::interruptHandler);	 onCodec(QUHWA);
 #endif
 #if S_WT440==1
-  InterruptChain::addInterruptCallback(0, wt440Receiver::interruptHandler); onCodec(16 + WT440);
+  InterruptChain::addInterruptCallback(0, wt440Receiver::interruptHandler);  onCodec(WT440);
 #endif
 
   time = millis();
 
 #if S_DALLAS==1
   sensors.begin();
+  onCodec(ONBOARD);
   numberOfDevices = sensors.getDeviceCount();
-  Serial.print("#devs: ");Serial.println(numberOfDevices);
+  Serial.print("#devs: "); Serial.println(numberOfDevices);
 #endif
 #if S_HTU21D==1
-  myHumidity.begin(); onCodec(16 + ONBOARD);
-  myHumidity.readHumidity();			// First read value after starting does not make sense.  
+  myHumidity.begin(); 
+  onCodec(ONBOARD);
+  if (myHumidity.readHumidity() == 998) Serial.println(F("No HTU21D")); // First read value after starting does not make sense.  
 #endif
 #if S_BMP085==1
-  bmp085.begin(); onCodec(16 + ONBOARD);
+  bmp085.begin(); 
+  onCodec(ONBOARD);
   if (bmp085.Calibration() == 998) Serial.println(F("No bmp085"));	// OnBoard
 #endif
 #if S_BH1750==1
   LightSensor.begin();
-  LightSensor.SetAddress(Device_Address_H);//Address 0x5C
+  onCodec(ONBOARD);
+  LightSensor.SetAddress(Device_Address_H);							//Address 0x23 or 0x5C
   LightSensor.SetMode(Continuous_H_resolution_Mode2);
+  if (LightSensor.GetLightIntensity() == (int) -1) {
+	Serial.println(F("No BH1750"));
+  };
 #endif
 }
 
@@ -202,14 +216,22 @@ void loop() {
   readSensors();								// Better for callbacks if there are sleeps
 }
 
-// ***************************** GENERIC ******************************************
+// ***************************** Codecs Admin *************************************
 
+// Switch a codec to on.
 void onCodec (byte codec) {
 	codecs |= ( (unsigned long) 0x0001 << codec	);		// AND
+#if A_MEGA==1
+  // We support dynamic enablement and disable of sensors and devices
+#endif
 }
 
+// We really should disable interrupts for codecs that are in the interrupt chain too.
 void offCodec (byte codec) {
   codecs &= ~( (unsigned long) 0x0001 << codec );		// NAND, no effect for 0, but for 1 bit makes 0
+#if A_MEGA==1
+  // We support dynamic enablement and disable of sensors and devices
+#endif
 }
 
 void setCodec (byte codec, byte val) {
@@ -227,7 +249,7 @@ void readSensors() {
 		time = millis();
 #if S_DALLAS
 		uint8_t ind;
-		DeviceAddress tempDeviceAddress; // We'll use this variable to store a found device address
+		DeviceAddress tempDeviceAddress; 			// We'll use this variable to store a found device address
 		sensors.requestTemperatures();
 		for(int i=0; i<numberOfDevices; i++)
 		{
@@ -236,19 +258,19 @@ void readSensors() {
 			{
 					
 				Serial.print(F("< "));
-				Serial.print(msgCnt);
-				Serial.print(F(" 3 0 "));					// Internal Sensor
+				Serial.print(msgCnt++);
+				Serial.print(F(" 3 0 "));				// Internal Sensor
 				
 				// Address bus is tempDeviceAddress, channel 0
 				// For LamPI, print in different format compatible with WiringPI
-				for (uint8_t j= 0; j < 7; j++)				// Skip int[7], this is CRC
+				for (uint8_t j= 0; j < 7; j++)			// Skip int[7], this is CRC
 				{
 					if (j<1) ind=j; else ind=7-j;
 					if (j==1) Serial.print("-");
 					if (tempDeviceAddress[ind] < 16) Serial.print("0");
 					Serial.print(tempDeviceAddress[ind], HEX);
 				}
-				Serial.print (F(" 0 "));						// Channel
+				Serial.print (F(" 0 "));				// Channel
 				// It responds almost immediately. Let's print out the data
 				float tempC = sensors.getTempC(tempDeviceAddress);
 				Serial.print(tempC,1);
@@ -266,9 +288,9 @@ void readSensors() {
 #endif
 #if S_HTU21D==1
 		// HTU21 or SHT21
-		//delay(100);
-		float humd = myHumidity.readHumidity();
+		//delay(50);
 		float temp = myHumidity.readTemperature();
+		float humd = myHumidity.readHumidity();
 		if (((int)humd != 999) && ((int)humd != 998 )) {	// Timeout (no sensor) or CRC error
 			Serial.print(F("< "));
 			Serial.print(msgCnt);
@@ -277,7 +299,8 @@ void readSensors() {
 			Serial.print(F(" "));
 			Serial.println(humd,1);
 			msgCnt++;
-		}		
+		}
+		else if (debug>=1) Serial.println(F(" ! No HTU21"));
 #endif
 #if S_BMP085==1		
 		// BMP085 or BMP180
@@ -294,8 +317,8 @@ void readSensors() {
 			Serial.print(F(" "));
 			Serial.print(altitude, 2);
 			if (debug>=1) {
-			Serial.print(F(" ! bmp: t: "));
-			Serial.print((float)(temperature/10), 1);
+				Serial.print(F(" ! bmp: t: "));
+				Serial.print((float)(temperature/10), 1);
 			}
 			Serial.println();
 			msgCnt++;
@@ -303,17 +326,19 @@ void readSensors() {
 #endif
 #if S_BH1750==1
 		uint16_t lux = LightSensor.GetLightIntensity();		// Get Lux value
-		Serial.print(F("< "));
-		Serial.print(msgCnt);
-		Serial.print(F(" 3 0 23 0 "));						// Address 23 or 5C
-		Serial.print(lux);
-		if (debug>=1) {
-		Serial.print(F(" ! Lumi: "));
-		Serial.print(lux);
-		Serial.print(F(" lux"));
+		if (lux != (int) -1) {
+			Serial.print(F("< "));
+			Serial.print(msgCnt);
+			Serial.print(F(" 3 0 23 0 "));						// Address 23 or 5C
+			Serial.print(lux);
+			if (debug>=1) {
+				Serial.print(F(" ! Lumi: "));
+				Serial.print(lux);
+				Serial.print(F(" lux"));
+			}
+			Serial.println();
+			msgCnt++;
 		}
-		Serial.println();
-		msgCnt++;
 #endif
 	}
 }
@@ -333,16 +358,20 @@ void parseCmd(char *readLine)
   char *pch;								// Pointer to character position
 	
   if (readLine[0] != '>') {
-	Serial.println(F("! Error: cmd \">\" "));
+	Serial.println(F("! ERR: cmd \">\" "));
 	return;
   } else { 
 	Serial.println(readLine);
 	pch = readLine+1;
   }
-  
+  if (strlen(readLine) <= 3) {
+	Serial.println(F("! ERR: syntax"));
+	return;
+  }
   pch = strtok (pch, " ,."); cnt = atoi(pch);
   pch = strtok (NULL, " ,."); cmd = atoi(pch);
 
+  if (cnt)
   switch(cmd) {
     case 0:									// admin
 	  pch = strtok (NULL, " ,."); adm = atoi(pch);
@@ -362,6 +391,9 @@ void parseCmd(char *readLine)
 		break;
 		case 2:	// Ask for statistics
 			Serial.print("! Stat = "); Serial.println("");
+#if			MEGA==1
+			
+#endif
 		break;
 		case 3:	// Debug level
 			pch = strtok (NULL, " ,."); debug = atoi(pch);
@@ -371,39 +403,47 @@ void parseCmd(char *readLine)
 			Serial.print(msgCnt);
 			Serial.print(F(" 0 3 "));
 			Serial.print(debug);
-			if (debug) Serial.print(F(" ! Debug ON"));
+			if (debug) {
+				Serial.print(F(" ! Debug ON"));
+			}
 			Serial.println("");
 			msgCnt++;
 		break;
+		case 4:
+			Serial.println(F(VERSION));
+		break;
 		default:
-			Serial.println(F("! ERROR admin cmd"));
+			Serial.println(F("! ERR admin cmd"));
 	  }
 	break;
 	case 1:								// transmit a key value from the Arduino
 		pch = strtok (NULL, " ,."); codec = atoi(pch);
 		switch (codec) {
-			case 0:
+			case KAKU:					// 0
 				parseKaku(pch);
 			break;
-			case 1:
+			case ACTION:				// 1
 				parseAction(pch);
 			break;
-			case 5:
+			case BLOKKER:				// 2
+				Serial.println(F("! ERR: Blokker"));
+			break;
+			case LIVOLO:				// 5
 				parseLivolo(pch);
 			break;
 #if T_QUHWA==1
-			case 7:						// QUHWA
+			case QUHWA:					// 7
 				parseQuhwa(pch);
 			break;
 #endif
 			default:
-				Serial.println(F("! ERROR: Codec"));
+				Serial.println(F("! ERR: Codec"));
 				return;
 		}
 		msgCnt++;
 	break;
 	case 2:								// 
-		Serial.print(F("! cmd 2 not implemented "));
+		Serial.print(F("! cmd 2 not found "));
 	break;
 	default:
 		Serial.print(F("! Unknown command "));
@@ -449,12 +489,21 @@ void parseKaku(char *pch)
 void parseAction(char *pch)
 {
 	byte group;
-	char unit;
-	ActionTransmitter atransmitter(8, 195, 3);
+	byte unit;
+	ActionTransmitter atransmitter(8, 195, 3);		// Timing 195us pulse
 	boolean lvl = false;
 	pch = strtok (NULL, " ,."); group = atoi(pch);
 	pch = strtok (NULL, " ,."); unit = atoi(pch);  
 	pch = strtok (NULL, " ,."); if (atoi(pch) == 1) lvl = true;
+
+	if (debug >= 1) {
+		Serial.print(F(" ! Action Xmt G:"));
+		Serial.print(group);
+		Serial.print(F(", U:"));
+		Serial.print(unit);
+		Serial.print(F(", L:"));
+		Serial.println(lvl);
+	}
 	atransmitter.sendSignal(group, unit, lvl);
 }
 
@@ -511,10 +560,18 @@ void showWt440Code(wt440Code receivedCode) {
 	
 	Serial.print(F("< "));
 	Serial.print(msgCnt);
-	if (receivedCode.wconst == 0x6)
-		Serial.print(F(" 3 1 "));					// Normal WT440 message format with Humidity
-	else 
-		Serial.print(F(" 3 2 "));					// BMP085 and BMP180 mis-use
+	switch (receivedCode.wconst) {
+		case 0x4:
+			Serial.print(F(" 3 3 ")); 				// Battery
+		break;
+		case 0x6:
+			Serial.print(F(" 3 1 "));				// Normal WT440 message format with Humidity
+		break;
+		case 0x7:
+			Serial.print(F(" 3 2 "));				// BMP085 and BMP180 mis-use
+		break;
+		//default:
+	}
 	Serial.print(receivedCode.address);
 	Serial.print(" ");
 	Serial.print(receivedCode.channel);
@@ -541,14 +598,15 @@ void showWt440Code(wt440Code receivedCode) {
 // --------------------------------------------------------------------------------
 // AURIOL
 // As the preprocessor is gettig wild when S_AURIOL != 1, we for the moment
-// have to comment the code out.
+// have to comment the code out. As we use code 0-7 for the WT440 messages,
+// Auriol starts at 8
 #if S_AURIOL==1
 //
 void showAuriolCode(auriolCode receivedCode) {
 	
 	Serial.print(F("< "));
 	Serial.print(msgCnt);
-	Serial.print(F(" 3 3 "));
+	Serial.print(F(" 3 8 "));
 	Serial.print(receivedCode.address);
 	Serial.print(F(" "));
 	Serial.print(receivedCode.channel);
@@ -629,7 +687,6 @@ void showLivoloCode(livoloCode receivedCode) {
 	Serial.print(F(" "));
 	Serial.print(receivedCode.level);
 
-	
 	if (debug >= 1) {
 		Serial.print(F(" ! Livolo ")); 
 #if STATISTICS==1
@@ -740,8 +797,8 @@ void showRemoteCode(unsigned long receivedCode, unsigned int period) {
 	// Following code should be equal for ALL receivers of this type
 	Serial.print(F("< "));
 	Serial.print(msgCnt);
-	Serial.print(F(" 2 "));					// action is type 1, blokker type 2, old=3, Elro=4
-	Serial.print(codec);
+	Serial.print(F(" 2 "));					
+	Serial.print(codec);		// action is type 1, blokker type 2, old=3, elro=4, livolo 5.
 	Serial.print(F(" "));
 	Serial.print(address);
 	Serial.print(F(" "));

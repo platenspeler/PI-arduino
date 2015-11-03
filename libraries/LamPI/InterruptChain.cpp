@@ -31,6 +31,18 @@ void InterruptChain::addInterruptCallback(byte interruptNr, InterruptCallback ca
   enable(interruptNr); 
 }
 
+// Delete an interrupt from the interrupt chain.
+// Parameter is the CODEC number
+// XXX under construction
+void InterruptChain::delInterruptCallback(byte interruptNr, InterruptCallback callback) {
+  InterruptChainLink *prevLink = chain[interruptNr]; // Note: the chain-array is NULL initialized, so the first time prevLink is indeed NULL
+  
+  chain[interruptNr] = (InterruptChainLink *) malloc(sizeof(InterruptChainLink)); // malloc instead of new, due to the lack of new / delete support in AVR-libc
+  chain[interruptNr]->init(callback, prevLink);      
+
+  enable(interruptNr); 
+}
+
 void InterruptChain::enable(byte interruptNr) {
  switch (interruptNr) {
     case 0:

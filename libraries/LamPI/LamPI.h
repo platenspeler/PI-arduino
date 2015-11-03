@@ -1,8 +1,8 @@
 // --------------------------------------------------------------------
 // LamPI specific definitions that apply to ALL Library functions
 // Author: Maarten Westenberg
-// Date: Sep 23, 2015
-// Version 1.7
+// Date: Oct 31, 2015
+// Version 1.7.3
 //
 // --------------------------------------------------------------------
 
@@ -25,19 +25,18 @@
 #define KOPOU   6
 #define QUHWA	7
 
-// Encoding type of Sensors Definitions
-// Used for messages sent to Gateway
-#define ONBOARD 0
-#define WT440  1
-#define OREGON 2
-#define AURIOL 3
-#define CRESTA 4
+// Encoding type of Sensors Definitions used for messages sent to Gateway
+#define ONBOARD 16
+#define WT440  17
+#define OREGON 18
+#define AURIOL 19
+#define CRESTA 20
 
 // Which Arduino Pins are used for what
 // Data wire was  port 10 on the Arduino for older DS18b20 gateways
 // but since pin 10 is used by RadioHead as well, switched to pin 7!!!
 // PIN	 2: Receiver pin for the 433MHz receivers
-//		 3: <free>
+//		 3: <free> SHT22?
 //		 4: The SDA pin of the I2C bus
 //		 5: The SCL clock pin of the I2c bus
 //		 6: Pin for detecting PIR motion
@@ -49,6 +48,7 @@
 //		12: Pin for RadioHead transceiver SI4432/RF22 and NRF24L01
 //		13: Pin for RadioHead transceiver SI4432/RF22 and NRF24L01
 #define A_RECEIVER 2
+#define A_SHT22
 #define A_SDA 4
 #define A_SCL 5
 #define PIR 6

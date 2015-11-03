@@ -51,7 +51,7 @@ class InterruptChain {
 		 * @see http://arduino.cc/en/Reference/AttachInterrupt
 		 */		
 		static void addInterruptCallback(byte interruptNr, InterruptCallback callbackIn);
-			
+		static void delInterruptCallback(byte interruptNr, InterruptCallback callbackIn);
 		/**
 		 * Enables interrupt handling by InterruptChain for given interrupt pin. Note that this
 		 * is different from Arduino's interrupts(), which will enable _all_ interrupts on the CPU.
