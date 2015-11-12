@@ -1,13 +1,11 @@
 /*
 * Code for RF remote 433 Slave Sensor (forwarding sensor readings over the air 433MHz to master). 
+* 
 *
-* Version 1.7; 150824
+* Version 1.7.3; 151105
 * (c) M. Westenberg (mw12554@hotmail.com)
 *
-* Based on contributions and work of many:
-* 	Randy Simons (Kaku and InterruptChain)
-*	SPC for Livolo
-* 	and others (Wt440) etc.
+* Based on contributions and work of many.
 *
 * Connect sender no pin D8 , SDA to pin A4 and SCL to pin A5
 */
@@ -37,20 +35,19 @@
 # include <bmp085.h>
   BMP085 bmp085;
 #endif
-
+#if S_BH1750==1
+# include <BH1750FVI.h>
+  BH1750FVI LightSensor;
+#endif
 
 // Others
 unsigned long time;
 int debug;
-int readCnt;				// Character count in buffer
-char readChar;				// Last character read from tty
-char readLine[32];			// Buffer of characters read
 int msgCnt;
-unsigned long codecs;		// must be at least 32 bits for 32 positions. Use long instead of array.
 
 // Create a transmitter using digital pin 8 to transmit,
 // with a period duration of 260ms (default), repeating the transmitted
-// code 2^3=8 times.
+// code 4 times.
 
 wt440Transmitter wtransmitter(8);
 
@@ -58,17 +55,17 @@ wt440Transmitter wtransmitter(8);
 //
 void setup() {
   // As fast as possible for USB bus
-  Serial.begin(115200);
+  Serial.begin(BAUDRATE);
   msgCnt = 0;
-  readCnt = 0;
   debug = 1;
-  codecs = 0;
   time = millis();
+  digitalWrite(S_TRANSMITTER, LOW);		// Make pin low.
+	
 #if S_DALLAS==1
   Serial.print("DALLAS ");
   sensors.begin();
   numberOfDevices = sensors.getDeviceCount();
-  Serial.print("#: ");Serial.print(numberOfDevices); Serial.println(" ");
+  Serial.print("#: "); Serial.print(numberOfDevices); Serial.println(" ");
 #endif
 #if S_HTU21D==1
   Serial.println("HTU21D ");
@@ -79,10 +76,13 @@ void setup() {
   Serial.println("BMP085 ");
   if (bmp085.Calibration() == 998) Serial.println(F("No bmp085"));	// OnBoard
 #endif
-  // Initialize receiver on interrupt 0 (= digital pin 2), calls the callback (for example "showKakuCode")
-  // after 2 identical codes have been received in a row. (thus, keep the button pressed for a moment)
+#if S_BH1750==1
+  Serial.println(F("BH1750 "));
+  LightSensor.begin();
+  LightSensor.SetAddress(Device_Address_H);							//Address 0x5C
+  LightSensor.SetMode(Continuous_H_resolution_Mode2);
+#endif
 
-  // No receivers
 }
 
 // --------------------------------------------------------------------------------
@@ -177,7 +177,9 @@ void loop() {
 			msgCode.humi = 0;
 			msgCode.temp = (unsigned int) (tempC * 128) + 6400; 
 			msgCode.wcode = 0x6;				// Weather code is standard temp/humi
-			wtransmitter.sendMsg(msgCode);
+			
+			wtransmitter.sendMsg(msgCode);		// XMIT the value
+			delay(100);
 			
 			if (debug) {
 				Serial.print("! DS18b20 Xmit: A "); Serial.print(msgCode.address);
@@ -206,7 +208,7 @@ void loop() {
 	}
 #endif
 
-  delay(62000);				// Wait a second of 60 or so. 
+  delay(63000);				// Wait a second of 60 or so. 
   // Do not use 60 seconds exactly to avoid all sensors reporting on the same time
 }
 

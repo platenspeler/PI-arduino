@@ -8,8 +8,7 @@
 #include "Arduino.h"
 #include "wt440Transmitter.h"
 
-#define PULSE0 2000
-#define PULSE1 1000
+
 
 wt440Transmitter::wt440Transmitter(byte pin)
 {
@@ -19,7 +18,7 @@ wt440Transmitter::wt440Transmitter(byte pin)
 
 /*
  * wt440Receiver
- * WT440H weather station sensor FUCTION
+ * WT440H weather station sensor FUNCTION
  *
  * timing:
  *           _   
@@ -50,8 +49,8 @@ wt440Transmitter::wt440Transmitter(byte pin)
 void wt440Transmitter::sendMsg(wt440TxCode msgCode) {
   unsigned int temp, humi;
   
-  // Retransmit 3 times to transmit a command
-  for (pulse= 0; pulse <= 2; pulse = pulse+1) {
+  // Retransmit 4 times to transmit a command
+  for (pulse= 0; pulse <= 3; pulse = pulse+1) {
 	byte par = 0;
   	high = false;	// XXX first pulse is always low-high
 	
@@ -75,8 +74,15 @@ void wt440Transmitter::sendMsg(wt440TxCode msgCode) {
 	for (i = 3; i>0; i--) { // transmit wcode of 3 bits
 		byte txPulse=bitRead(msgCode.wcode, i-1); // read bits from keycode
 		par ^= txPulse;
+#if STATISTICS==1
+		Serial.print(txPulse);
+		Serial.print(F(":"));
+#endif
 		selectPulse(txPulse);    
 	}
+#if STATISTICS==1
+		Serial.println();
+#endif
 	// Assume parity does not change with 2 1-bit values, make const flexible to code BMP085 code
 	//selectPulse(1); // Wconst 
 	//selectPulse(1); // Wconst
@@ -119,7 +125,6 @@ void wt440Transmitter::selectPulse(byte inBit) {
 			sendPulse(5);			// low
 			sendPulse(3);			// high
         }
-        // high=!high; // invert next pulse not necessary for a 1 bit (2 pulses)
         break;        
 	}
 }

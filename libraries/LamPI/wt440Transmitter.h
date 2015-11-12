@@ -10,6 +10,11 @@
 #include "Arduino.h"
 #include "LamPI.h"
 
+#define STATISTICS 0
+
+#define PULSE0 2000
+#define PULSE1 1050			// Arduino Pro Mini has bad timing
+
 // Define what we are going to send. It does NOT fit in a long so make it a struct
 struct wt440TxCode {
 	byte address;
@@ -17,6 +22,9 @@ struct wt440TxCode {
 	byte humi;
 	byte wcode;				// Normally a const with value == 0x110 == 6
 	unsigned int temp;
+#if STATISTICS==1
+	
+#endif
 };
 
 class wt440Transmitter

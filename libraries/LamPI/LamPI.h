@@ -6,8 +6,7 @@
 //
 // --------------------------------------------------------------------
 
-
-
+// Define STATISTICS if we want more information about protocol handling
 
 // ==========================================================================
 // General definitions used in all library programs
@@ -30,12 +29,18 @@
 #define WT440  17
 #define OREGON 18
 #define AURIOL 19
-#define CRESTA 20
+#define LAMPI 20
+#define CRESTA 21
 
-// Which Arduino Pins are used for what
+// Analog Pin:
+//		 0: The ADC analog(!) pin for measuring battery 
+#define BATTERY_PIN 0
+
+// Which Digital Arduino Pins are used for what
 // Data wire was  port 10 on the Arduino for older DS18b20 gateways
 // but since pin 10 is used by RadioHead as well, switched to pin 7!!!
-// PIN	 2: Receiver pin for the 433MHz receivers
+// PIN	
+//		 2: Receiver pin for the 433MHz receivers
 //		 3: <free> SHT22?
 //		 4: The SDA pin of the I2C bus
 //		 5: The SCL clock pin of the I2c bus
@@ -51,7 +56,7 @@
 #define A_SHT22
 #define A_SDA 4
 #define A_SCL 5
-#define PIR 6
+#define PIR_PIN 6
 #define ONE_WIRE_BUS 7
 #define S_TRANSMITTER 8
 #define RH_SCLCK	9

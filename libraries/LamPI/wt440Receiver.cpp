@@ -16,8 +16,8 @@
  * WT440H weather station sensor FUCTION
  *
  * timing:
- *           _   
- * '1':   |_| |     (T,T)
+ *         _   
+ * '1':   | |_|     (T,T) or inverted
  *                 
  * '0':   |___|     (2T)
  * 
@@ -102,10 +102,10 @@ void wt440Receiver::interruptHandler() {
 	static bool skip;
 
 	// Allow for large error-margin. ElCheapo-hardware :(
-	min1period = 800; // Lower limit for 1 period is 0.3 times measured period; high signals can "linger" a bit sometimes, making low signals quite short.
+	min1period = 700; // Lower limit for 1 period is 0.3 times measured period; high signals can "linger" a bit sometimes, making low signals quite short.
 	max1period = 1500; // Upper limit 
 	min2period = 1500; // Lower limit 
-	max2period = 2300; // Upper limit 
+	max2period = 2400; // Upper limit 
 	
 	// Filter out too short pulses. This method works as a low pass filter.
 	edgeTimeStamp[1] = edgeTimeStamp[2];
@@ -139,8 +139,8 @@ void wt440Receiver::interruptHandler() {
 	if (_state == -1) {
 		// wait for the start sequence B1100 (8 short, 4 long ).
 		// By default 1T is 1000µs, but for maximum compatibility go as low as 750µs
-
-		if ((duration > 750) && (duration < 1500)){ // =750 µs, minimal time between two edges before decoding starts.
+		// =700 µs, minimal time between two edges before decoding starts.
+		if ((duration > min1period) && (duration < max1period)) { 
 			// Sync signal, first bit received.. Preparing for decoding
 			// repeats = 0;
 #if STATISTICS==1

@@ -5,7 +5,6 @@
 * Version 1.7.2; 151015
 * (c) M. Westenberg (mw12554@hotmail.com)
 *
-*
 * Connect sender no pin D8 , SDA to pin A4 and SCL to pin A5
 */
 
@@ -29,7 +28,7 @@
 
 #if S_HTU21D==1
 # include <HTU21D.h>
-  HTU21D myHumidity;			// Init Sensor(s)
+  HTU21D myHumidity;		// Init Sensor(s)
 #endif
 
 #if S_BMP085==1
@@ -53,7 +52,7 @@ unsigned long codecs;		// must be at least 32 bits for 32 positions. Use long in
 
 // Create a transmitter using digital pin 8 to transmit,
 // with a period duration of 260ms (default), repeating the transmitted
-// code 2^3=8 times.
+// code 4 times. (see w440Transmitter.cpp)
 
 wt440Transmitter wtransmitter(8);
 
@@ -62,13 +61,13 @@ wt440Transmitter wtransmitter(8);
 void setup() {
   // if (F_CPU == 16000000) clock_prescale_set(clock_div_1);	// No effect
   
-  Serial.begin(115200);					// As fast as possible for USB bus
   msgCnt = 0;
   readCnt = 0;
-  debug = 1;
+  debug = DEBUG;
   codecs = 0;
   time = millis();
   
+  Serial.begin(BAUDRATE);					// As fast as possible for USB bus 
   digitalWrite(S_TRANSMITTER, LOW);
   
 #if S_DALLAS==1
@@ -149,7 +148,6 @@ void loop() {
 			
 			Serial.println();
 		}
-
 		msgCnt++;
 	}
 #endif
@@ -166,7 +164,7 @@ void loop() {
 		
 		msgCode.address = OWN_ADDRESS;
 		msgCode.channel = 1;
-		msgCode.humi = pressure/100 - 930;						// pressure coded as special case wt440
+		msgCode.humi = pressure/100 - 930;			// pressure coded as special case wt440
 		msgCode.temp = (unsigned int) ((temperature * 12.8) + 6400);  // BMP085 gives temperature*10;
 		msgCode.wcode = 0x7;						// Weather code a BMP085 device with airpressure
 		wtransmitter.sendMsg(msgCode);
@@ -182,10 +180,7 @@ void loop() {
 			Serial.print(F(", A ")); Serial.print(altitude, 2);
 			Serial.print(F(", W ")); Serial.print(msgCode.wcode, BIN);
 		}
-
-
 		Serial.println();
-	
 		msgCnt++;
 	}
 #endif	
@@ -205,7 +200,9 @@ void loop() {
 			msgCode.humi = 0;
 			msgCode.temp = (unsigned int) (tempC * 128) + 6400; 
 			msgCode.wcode = 0x6;				// Weather code is standard temp/humi
-			wtransmitter.sendMsg(msgCode);
+			
+			tRestart(200);						// XXX wakeup the transmitter with high-low pulse
+			wtransmitter.sendMsg(msgCode);		// Transmit message
 			
 			if (debug>=1) {
 				Serial.print("! DS18b20 Xmit: A "); Serial.print(msgCode.address);
@@ -229,7 +226,6 @@ void loop() {
 				// Serial.print(msgCode.wcode, BIN);
 				Serial.println("");
 			}
-			
 			msgCnt++;
 		} 
 		//else ghost device! Check your power requirements and cabling
@@ -237,7 +233,7 @@ void loop() {
 #endif
 
   if (debug >= 1) {
-	delay(100);							// NEEEDED to avoid LowPower to disable UART too early
+	delay(100);								// NEEEDED to avoid LowPower to disable UART too early
   }
   // Wait between reading the sensors and reading battery
   // to avoid battery reading fluctuate every reading
@@ -249,23 +245,25 @@ void loop() {
   if (batteryValue != batteryPrevValue) {
 	// Battery value changed, so send a message
 	msgCode.address = OWN_ADDRESS;
-	// msgCode.channel = 0;				// Must be used by one of the sensors above
+	// msgCode.channel = 0;					// Must be used by the last of the sensors above
 	msgCode.humi = 0;
 	msgCode.temp = (unsigned int) (batteryValue);
-	msgCode.wcode = 0x4;				// Use a this free code for the battery
+	msgCode.wcode = 0x4;					// Use a this free code for the battery
+	
+	tRestart(200);							// XXX Restart transmitter
 	wtransmitter.sendMsg(msgCode);
 	//batteryPrevValue = batteryValue;
   }
   if (debug >= 1) {
-	Serial.print("Battery: ");
+	Serial.print(" ! Battery: ");
 	Serial.print(batteryValue);
 	Serial.print(", V: ");
 	Serial.println(batteryVoltage);
-  } 
+  }
 #endif
 
   if (debug >= 1) {
-	delay(100);							// NEEEDED to avoid LowPower to disable UART too early
+	delay(100);								// NEEEDED to avoid LowPower to disable UART too early
   }
 
   // Do not use 60 seconds exactly to avoid all sensors reporting on the same time
@@ -278,5 +276,11 @@ void loop() {
   LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
 }
 
-
+void tRestart(int ms) {
+	int txPin = S_TRANSMITTER;
+	digitalWrite(txPin, HIGH);
+	delayMicroseconds(100);
+	digitalWrite(txPin, LOW);
+	delayMicroseconds(ms);
+}
 

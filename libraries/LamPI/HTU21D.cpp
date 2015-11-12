@@ -104,7 +104,7 @@ float HTU21D::readTemperature(void)
 	Wire.endTransmission();
 
 	//Hang out while measurement is taken. 50mS max, page 4 of datasheet.
-	delay(55);
+	delay(100); //Was 55
 
 	//Comes back in three bytes, data(MSB) / data(LSB) / Checksum
 	Wire.requestFrom(HTDU21D_ADDRESS, 3);

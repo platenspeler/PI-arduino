@@ -9,9 +9,21 @@
 *	SPARCfun for HTU21 code and BMP85
 * 	and others (Wt440 protocol) etc.
 *
-* Connect the receiver to digital pin 2, sender to pin 8.
+* Connect the receiver to digital pin 2, sender to pin 8. Other definitions in LamPI.h
 * NOTE: You can enable/disable modules in the LamPI.h file
 *		Sorry for making the code in this file so messy :-) with #if
+*/
+
+/*
+  This file implements the Arduino side of the LamPI Gateway.
+  The gate way can be used stand-alone and be controlled through the Serial port or can be
+  - as designed - work together with the LamPI-arduino process on the Raspberry server.
+  
+  Please keep in mind that all protocols that are implemented on the Arduino side need to be
+  supported by the LamPI-arduino process on the Raspberry as well in order to provide
+  reliable and meaningful communication.
+  So: baudrate and supported potocolmust be set corecly in the ArduinoGateway.h file
+  And these must match the lampi_arduino.h definitions in file on ~/receivers/arduino on Raspberry
 */
 
 // Please look at http://platenspeler.github.io/HardwareGuide/Arduino-Gateway/gatewayMsgFormat.html
@@ -24,6 +36,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include "LamPI.h"				// Shared Definitions, such as PIN definitions
+#include <Streaming.h>          //http://arduiniana.org/libraries/streaming/
 #include "ArduinoGateway.h"		// Transceiver specific definitions
 
 // Transmitters Include
@@ -48,9 +61,6 @@
 #include <RemoteReceiver.h>
 #include <auriolReceiver.h>		// if auriolCode undefined, preprocessor will fail.
 #include <quhwaReceiver.h>
-//
-// Others
-//
 #include <InterruptChain.h>
 
 //
@@ -69,9 +79,13 @@
 #if S_BH1750==1
 # include "BH1750FVI.h"
 #endif
+#if S_DS3231==1
+# include "DS3232RTC.h"     //http://github.com/JChristensen/DS3232RTC
+# include <Time.h>          //http://playground.arduino.cc/Code/Time
+#endif
 
 unsigned long time;			// fill up with millis();
-boolean debug;
+boolean debug;				// If set, more informtion is output to the serial port
 int  readCnt;				// Character count in buffer
 char readChar;				// Last character read from tty
 char readLine[32];			// Buffer of characters read
@@ -105,36 +119,49 @@ unsigned long codecs;		// must be at least 32 bits for 32 positions. Use long in
 //
 void setup() {
   
-  Serial.begin(BAUDRATE);			// As fast as possible for USB bus, defined in Transeiver433.h
-  msgCnt = 0;
-  readCnt = 0;
-  debug = 0;
-  codecs = 0;
+	Serial.begin(BAUDRATE);			// As fast as possible for USB bus, defined in Transeiver433.h
+	msgCnt = 0;
+	readCnt = 0;
+	debug = 0;
+	codecs = 0;
+
+#if A_MEGA==1
+	Serial.println(F("! Mega Gateway"));
+	Serial.print(F("! debug: ")); Serial.println(debug);
+#endif
 
   // Create a transmitter using digital pin S_TRANSMITTER (default is 8) to transmit,
   // with a period duration of 260ms (default), repeating the transmitted
   // code 2^3=8 times.
   digitalWrite(S_TRANSMITTER, LOW);
 
-  // Initialize receiver on interrupt 0 (= digital pin 2), calls the callback (for example "showKakuCode")
-  // after 2 identical codes have been received in a row. (thus, keep the button pressed for a moment)
+#if S_DS3231==1
+	setSyncProvider(RTC.get);
+	Serial << F("! RTC Sync");
+    if (timeStatus() != timeSet) Serial << F(" FAIL!"); else Serial << F(" OK");
+    Serial << endl;
+	onCodec(ONBOARD);
+#endif
+  
+	// Initialize receiver on interrupt 0 (= digital pin 2), calls the callback (for example "showKakuCode")
+	// after 2 identical codes have been received in a row. (thus, keep the button pressed for a moment)
 
-  KakuReceiver::init(-1, 2, showKakuCode);
-  RemoteReceiver::init(-1, 2, showRemoteCode);
+	KakuReceiver::init(-1, 2, showKakuCode);
+	RemoteReceiver::init(-1, 2, showRemoteCode);
 #if R_LIVOLO
-  livoloReceiver::init(-1, 3, showLivoloCode);
+	livoloReceiver::init(-1, 3, showLivoloCode);
 #endif
 #if R_KOPOU==1
-  kopouReceiver::init(-1, 3, showKopouCode);
+	kopouReceiver::init(-1, 3, showKopouCode);
 #endif
 #if R_QUHWA==1
 	quhwaReceiver::init(-1, 3, showQuhwaCode);
 #endif
 #if S_WT440==1
-  wt440Receiver::init(-1, 1, showWt440Code);
+	wt440Receiver::init(-1, 1, showWt440Code);
 #endif
 #if S_AURIOL==1
-  auriolReceiver::init(-1, 2, showAuriolCode);
+	auriolReceiver::init(-1, 2, showAuriolCode);
 #endif
 
   // Change interrupt mode to CHANGE (on flanks)
@@ -147,47 +174,51 @@ void setup() {
   //
 
 #if S_AURIOL==1
-  InterruptChain::addInterruptCallback(0, auriolReceiver::interruptHandler); onCodec(AURIOL);
+	InterruptChain::addInterruptCallback(0, auriolReceiver::interruptHandler); onCodec(AURIOL);
 #endif
-  InterruptChain::addInterruptCallback(0, RemoteReceiver::interruptHandler); onCodec(ACTION);
-  InterruptChain::addInterruptCallback(0, KakuReceiver::interruptHandler);   onCodec(KAKU);
-  InterruptChain::addInterruptCallback(0, livoloReceiver::interruptHandler); onCodec(LIVOLO);
+	InterruptChain::addInterruptCallback(0, RemoteReceiver::interruptHandler); onCodec(ACTION);
+	InterruptChain::addInterruptCallback(0, KakuReceiver::interruptHandler);   onCodec(KAKU);
+	InterruptChain::addInterruptCallback(0, livoloReceiver::interruptHandler); onCodec(LIVOLO);
 #if R_KOPOU==1
-  InterruptChain::addInterruptCallback(0, kopouReceiver::interruptHandler);	 onCodec(KOPOU);
+	InterruptChain::addInterruptCallback(0, kopouReceiver::interruptHandler);	 onCodec(KOPOU);
 #endif
 #if R_QUHWA==1
-  InterruptChain::addInterruptCallback(0, quhwaReceiver::interruptHandler);	 onCodec(QUHWA);
+	InterruptChain::addInterruptCallback(0, quhwaReceiver::interruptHandler);	 onCodec(QUHWA);
 #endif
 #if S_WT440==1
-  InterruptChain::addInterruptCallback(0, wt440Receiver::interruptHandler);  onCodec(WT440);
+	InterruptChain::addInterruptCallback(0, wt440Receiver::interruptHandler);  onCodec(WT440);
 #endif
 
-  time = millis();
+	time = millis();
 
 #if S_DALLAS==1
-  sensors.begin();
-  onCodec(ONBOARD);
-  numberOfDevices = sensors.getDeviceCount();
-  Serial.print("#devs: "); Serial.println(numberOfDevices);
+	sensors.begin();
+	onCodec(ONBOARD);
+	numberOfDevices = sensors.getDeviceCount();
+	Serial.print("! #Dallas: "); Serial.println(numberOfDevices);
 #endif
 #if S_HTU21D==1
-  myHumidity.begin(); 
-  onCodec(ONBOARD);
-  if (myHumidity.readHumidity() == 998) Serial.println(F("No HTU21D")); // First read value after starting does not make sense.  
+	myHumidity.begin(); 
+	myHumidity.setResolution(0);
+	onCodec(ONBOARD);
+	if (myHumidity.readHumidity() == 998) Serial.println(F("! No HTU21D")); // First read value after starting does not make sense.  
 #endif
 #if S_BMP085==1
-  bmp085.begin(); 
-  onCodec(ONBOARD);
-  if (bmp085.Calibration() == 998) Serial.println(F("No bmp085"));	// OnBoard
+	bmp085.begin(); 
+	onCodec(ONBOARD);
+	if (bmp085.Calibration() == 998) Serial.println(F("! No BMP085"));	// OnBoard
 #endif
 #if S_BH1750==1
-  LightSensor.begin();
-  onCodec(ONBOARD);
-  LightSensor.SetAddress(Device_Address_H);							//Address 0x23 or 0x5C
-  LightSensor.SetMode(Continuous_H_resolution_Mode2);
-  if (LightSensor.GetLightIntensity() == (int) -1) {
-	Serial.println(F("No BH1750"));
-  };
+	LightSensor.begin();
+	onCodec(ONBOARD);
+	LightSensor.SetAddress(Device_Address_H);							//Address 0x23 or 0x5C
+	LightSensor.SetMode(Continuous_H_resolution_Mode2);
+	if (LightSensor.GetLightIntensity() == (int) -1) {
+		Serial.println(F("! No BH1750"));
+	};
+#endif
+#if A_MEGA==1
+	printCodecs();
 #endif
 }
 
@@ -218,19 +249,25 @@ void loop() {
 
 // ***************************** Codecs Admin *************************************
 
+//
 // Switch a codec to on.
+//
 void onCodec (byte codec) {
 	codecs |= ( (unsigned long) 0x0001 << codec	);		// AND
 #if A_MEGA==1
   // We support dynamic enablement and disable of sensors and devices
+  
 #endif
 }
 
+//
 // We really should disable interrupts for codecs that are in the interrupt chain too.
+//
 void offCodec (byte codec) {
-  codecs &= ~( (unsigned long) 0x0001 << codec );		// NAND, no effect for 0, but for 1 bit makes 0
+	codecs &= ~( (unsigned long) 0x0001 << codec );		// NAND, no effect for 0, but for 1 bit makes 0
 #if A_MEGA==1
-  // We support dynamic enablement and disable of sensors and devices
+	// We support dynamic enablement and disable of sensors and devices
+	
 #endif
 }
 
@@ -238,6 +275,27 @@ void setCodec (byte codec, byte val) {
   if (val = 0) offCodec(codec);
   else onCodec(codec);
 }
+
+#if A_MEGA==1
+void printCodecs() {
+	Serial.print(F("! Codecs enabled: "));
+	if ((codecs >> KAKU) & 0x0001) Serial.print(F("KAKU "));
+	if ((codecs >> ACTION) & 0x0001) Serial.print(F("ACTION "));
+	if ((codecs >> BLOKKER) & 0x0001) Serial.print(F("BLOKKER "));
+	if ((codecs >> KAKUOLD) & 0x0001) Serial.print(F("KAKOLD "));
+	if ((codecs >> ELRO) & 0x0001) Serial.print(F("ELRO "));
+	if ((codecs >> KOPOU) & 0x0001) Serial.print(F("KOPOU "));
+	if ((codecs >> LIVOLO) & 0x0001) Serial.print(F("LIVOLO "));
+	if ((codecs >> QUHWA) & 0x0001) Serial.print(F("QUWAH "));
+	
+	if ((codecs >> ONBOARD) & 0x0001) Serial.print(F("ONBOARD "));
+	if ((codecs >> WT440) & 0x0001) Serial.print(F("WT440 "));
+	if ((codecs >> OREGON) & 0x0001) Serial.print(F("OREGON "));
+	if ((codecs >> AURIOL) & 0x0001) Serial.print(F("AURIOL "));
+	if ((codecs >> CRESTA) & 0x0001) Serial.print(F("CRESTA "));
+	Serial.println();
+}
+#endif
 
 // ************************* SENSORS PART *****************************************
 
@@ -286,18 +344,24 @@ void readSensors() {
 			//else ghost device! Check your power requirements and cabling
 		}
 #endif
+
 #if S_HTU21D==1
 		// HTU21 or SHT21
 		//delay(50);
-		float temp = myHumidity.readTemperature();
 		float humd = myHumidity.readHumidity();
+		float temp = myHumidity.readTemperature();
 		if (((int)humd != 999) && ((int)humd != 998 )) {	// Timeout (no sensor) or CRC error
 			Serial.print(F("< "));
 			Serial.print(msgCnt);
 			Serial.print(F(" 3 0 40 0 "));		// Address bus 40, channel 0
 			Serial.print(temp,1);
 			Serial.print(F(" "));
-			Serial.println(humd,1);
+			Serial.print(humd,1);
+			if (debug) {
+				Serial.print(F(" ! HTU21 T: "));
+				Serial.print(temp/10);
+			}
+			Serial.println();
 			msgCnt++;
 		}
 		else if (debug>=1) Serial.println(F(" ! No HTU21"));
@@ -561,6 +625,9 @@ void showWt440Code(wt440Code receivedCode) {
 	Serial.print(F("< "));
 	Serial.print(msgCnt);
 	switch (receivedCode.wconst) {
+		case 0x0:
+			Serial.print(F(" 3 4 ")); 				// PIR
+		break;
 		case 0x4:
 			Serial.print(F(" 3 3 ")); 				// Battery
 		break;
@@ -572,18 +639,55 @@ void showWt440Code(wt440Code receivedCode) {
 		break;
 		//default:
 	}
-	Serial.print(receivedCode.address);
+	Serial.print(receivedCode.address);				// Values from 0x0 to 0xF (4 bits)
 	Serial.print(" ");
-	Serial.print(receivedCode.channel);
+	Serial.print(receivedCode.channel);				// Values fro 0x0 to 0x3 (2 bits)
 	Serial.print(" ");
-	Serial.print(receivedCode.temperature);
+	Serial.print(receivedCode.temperature);			// May be used for battery when wconst == 0x4
 	Serial.print(" ");
 	Serial.print(receivedCode.humidity);			// Can be misused as airpressure is wconst == B111 (7)
 
 	if (debug >= 1) {
-		Serial.print(F(" ! WT440:: W: ")); Serial.print(receivedCode.wconst);
-		Serial.print(F(", P: ")); Serial.print(receivedCode.par);
+		Serial.print(F(" ! WT440:: ")); 
+#if A_MEGA==1
+		switch (receivedCode.wconst) {
+		case 0x00:
+			Serial.print(F(" PIR DEV: ")); 				// PIR
+			Serial.print(receivedCode.address);
+			Serial.print(F(" "));
+			Serial.print(receivedCode.temperature);
+		break;
+		case 0x4:
+			Serial.print(F(" BATT DEV: ")); 			// Battery
+			Serial.print(receivedCode.address);
+			Serial.print(F(" "));
+			Serial.print((float)receivedCode.temperature / 10, 1);
+			Serial.print(F("%"));
+		break;
+		case 0x6:
+			Serial.print(F(" WT440 DEV: "));			// Normal WT440 message format with Humidity
+			Serial.print(receivedCode.address);
+			Serial.print(F(" TEMP: "));	
+			Serial.print((float)(receivedCode.temperature - 6400) / 128, 1);
+			Serial.print(F(" HUM: "));
+			Serial.print(receivedCode.humidity,1);
+			Serial.print(F("%"));
+		break;
+		case 0x7:
+			Serial.print(F(" BMP DEV: "));				// BMP085 and BMP180 mis-use
+			Serial.print(receivedCode.address);
+			Serial.print(F(" TEMP: "));
+			Serial.print((float)(receivedCode.temperature - 6400) / 128, 1);
+			Serial.print(F(" P: "));
+			Serial.print(receivedCode.humidity + 930);
+		break;
+		//default:
+		}
+#endif
+
 # if STATISTICS==1
+		Serial.print(F(", W: "));Serial.print(receivedCode.wconst);
+		Serial.print(F(", P: ")); Serial.print(receivedCode.par);
 		Serial.print(F(", P1: ")); Serial.print(receivedCode.min1Period);
 		Serial.print(F("-")); Serial.print(receivedCode.max1Period);
 		Serial.print(F(", P2: ")); Serial.print(receivedCode.min2Period);
@@ -633,6 +737,7 @@ void showAuriolCode(auriolCode receivedCode) {
 
 // --------------------------------------------------------------------------------
 // KAKU
+// Regular klikaanklikuit devices
 // Callback function is called only when a valid code is received.
 //
 void showKakuCode(KakuCode receivedCode) {
@@ -666,6 +771,28 @@ void showKakuCode(KakuCode receivedCode) {
 		Serial.print(receivedCode.dimLevel);
 	  }
     break;
+  }
+  if (debug) {
+	Serial.print(F(" ! Kaku G: "));
+	Serial.print(receivedCode.address);
+	Serial.print(F(" N "));
+	Serial.print(receivedCode.unit);
+	Serial.print(F(" "));
+	switch (receivedCode.switchType) {
+		case KakuCode::off:
+			Serial.print(F(" 0"));
+		break;
+		case KakuCode::on:
+			Serial.print(F(" on"));
+		break;
+		case KakuCode::dim:
+			Serial.print(F(" dim "));
+			if (receivedCode.dimLevelPresent) {
+				Serial.print(F(" "));
+				Serial.print(receivedCode.dimLevel);
+			}
+		break;
+	}
   }
   Serial.println("");
   Serial.flush();
