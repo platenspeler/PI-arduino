@@ -98,7 +98,7 @@ void wt440Receiver::interruptHandler() {
 	static byte receivedBit;			// Contains "bit" currently receiving
 	static byte repeats = 0;			// The number of times the an identical code is received in a row.
 	static unsigned long edgeTimeStamp[3] = {0, };	// Timestamp of edges
-	static unsigned int min1period, max1period, min2period, max2period;
+	static uint16_t min1period, max1period, min2period, max2period;
 	static bool skip;
 
 	// Allow for large error-margin. ElCheapo-hardware :(
@@ -123,9 +123,8 @@ void wt440Receiver::interruptHandler() {
 		return;
 	}
 	
-	
 	// unsigned int duration = edgeTimeStamp[1] - edgeTimeStamp[0];
-	unsigned int duration = edgeTimeStamp[2] - edgeTimeStamp[1];
+	uint16_t duration = edgeTimeStamp[2] - edgeTimeStamp[1];
 	edgeTimeStamp[0] = edgeTimeStamp[1];
 	
 	// Filter
@@ -162,7 +161,7 @@ void wt440Receiver::interruptHandler() {
 		else {
 			return;
 		}
-	} else 
+	} else	
 	if (_state < 4) { // Verify start bit 1 and 2, are 4 pulses!
 		// Duration must be ~1T
 		if (duration > max1period) {
@@ -197,7 +196,7 @@ void wt440Receiver::interruptHandler() {
 		}
 		else { 
 			if (_state % 2 == 1 ) {
-				receivedCode.address = receivedCode.address * 2 + 1; 
+				receivedCode.address = ( receivedCode.address * 2 ) + 1; 
 				receivedCode.par ^= 1;				
 			}
 		}
@@ -213,7 +212,7 @@ void wt440Receiver::interruptHandler() {
 			receivedBit = 1; 
 		}
 		if (_state % 2 == 1 ) {
-			receivedCode.channel = receivedCode.channel * 2 + receivedBit; 
+			receivedCode.channel = ( receivedCode.channel << 1 ) + receivedBit; 
 			receivedCode.par ^= receivedBit;
 		}
 	} else
@@ -227,7 +226,7 @@ void wt440Receiver::interruptHandler() {
 			receivedBit = 1; 
 		}
 		if (_state % 2 == 1 ) {
-			receivedCode.wconst = receivedCode.wconst * 2 + receivedBit; 
+			receivedCode.wconst = ( receivedCode.wconst << 1 ) + receivedBit; 
 			receivedCode.par ^= 1;
 		}
 	} else
@@ -248,7 +247,7 @@ void wt440Receiver::interruptHandler() {
 			receivedBit = 1; 
 		}
 		if (_state % 2 == 1 ) {
-			receivedCode.humidity = receivedCode.humidity * 2 + receivedBit;
+			receivedCode.humidity = ( receivedCode.humidity * 2 ) + receivedBit;
 			receivedCode.par ^= receivedBit;
 		}
 	} else
@@ -263,7 +262,7 @@ void wt440Receiver::interruptHandler() {
 			receivedBit = 1; 
 		}
 		if (_state % 2 == 1 ) {
-			receivedCode.temperature = receivedCode.temperature * 2 + receivedBit; 
+			receivedCode.temperature = ( receivedCode.temperature * 2 ) + receivedBit; 
 			receivedCode.par ^= receivedBit;
 		}
 	} else
@@ -331,7 +330,7 @@ void wt440Receiver::interruptHandler() {
 		}
 				
 		// Reset for next round
-		_state=0; // no need to wait for another sync-bit!
+		_state= 0; //  no need to wait for another sync-bit!
 		return;
 	}
 	

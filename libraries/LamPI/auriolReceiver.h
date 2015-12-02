@@ -11,7 +11,6 @@
 #define auriolReceiver_h
 
 #include <Arduino.h>
-#include "LamPI.h"
 
 struct auriolCode {
 #if STATISTICS==1

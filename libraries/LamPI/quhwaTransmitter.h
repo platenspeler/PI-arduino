@@ -10,7 +10,6 @@
 #define Quhwa_h
 
 #include "Arduino.h"
-#include "LamPI.h"
 
 //
 // Pulse is 350 uSec, 0

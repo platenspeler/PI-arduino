@@ -10,7 +10,6 @@
 #define kopouReceiver_h
 
 #include <Arduino.h>
-#include "LamPI.h"
 
 struct kopouCode {
 	unsigned short period;

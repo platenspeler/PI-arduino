@@ -10,6 +10,7 @@
 // ----------------------------------------------------------------------------------------
 
 #define BAUDRATE 115200
+#define DEBUG 1
 
 // If you enable this setting, in debug mode all kind off
 // min/max timers will be displayed
@@ -48,6 +49,6 @@
 #define S_HTU21D 1      //Temperature_and_Humidity I2C sensor
 #define S_BH1750 1      //Luminescense I2C sensor
 #define S_BATTERY 0     //Internal voltage reference pin A0
-#define S_DS3231 1      //RTC I2C sensor
+#define S_DS3231 0      //RTC I2C sensor      
 #define S_PIR 0         //PIR sensor connected to pin 6
 

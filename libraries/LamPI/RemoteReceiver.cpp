@@ -6,7 +6,7 @@
  */
 
 #include "RemoteReceiver.h"
-
+#define STATISTICS 0
 
 /************
 * RemoteReceiver
@@ -98,7 +98,13 @@ void RemoteReceiver::interruptHandler() {
 		}
 	} else if (_state<48) { // Decoding message
 		receivedBit <<= 1;
-
+#if STATISTICS==1
+		if (_state > 4) {
+			Serial.print(_state);
+			Serial.print(":");
+			Serial.println( duration );
+		}		
+#endif
 		// bit part durations can ONLY be 1 or 3 periods.
 		if (duration<=max1Period) {
 			receivedBit &= B1110; // Clear LSB of receivedBit

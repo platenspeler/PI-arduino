@@ -8,7 +8,6 @@
 #define wt440_h
 
 #include "Arduino.h"
-#include "LamPI.h"
 
 #define STATISTICS 0
 

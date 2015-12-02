@@ -10,8 +10,6 @@
 #define livoloReceiver_h
 
 #include <Arduino.h>
-#include "LamPI.h"
-
 
 struct livoloCode {
 	unsigned long address;		// Address of received code. [0..2^26-1]

@@ -1,8 +1,7 @@
-// #include <avr/power.h>
 /*
 * Code for RF remote 433 Slave Sensor (forwarding sensor reading over the air 433MHz to master). 
 *
-* Version 1.7.2; 151015
+* Version 1.7.4; 151113
 * (c) M. Westenberg (mw12554@hotmail.com)
 *
 * Connect sender no pin D8 , SDA to pin A4 and SCL to pin A5
@@ -23,7 +22,7 @@
   OneWire oneWire(ONE_WIRE_BUS);
   // Pass our oneWire reference to Dallas Temperature. 
   DallasTemperature sensors(&oneWire);
-  int numberOfDevices; // Number of temperature devices found
+  int numberOfDevices; 		// Number of temperature devices found
 #endif
 
 #if S_HTU21D==1
@@ -103,12 +102,14 @@ void setup() {
   // No receivers
 }
 
+
 // --------------------------------------------------------------------------------
 // LOOP
 //
 void loop() {
   wt440TxCode msgCode;
-
+  //digitalWrite(S_TRANSMITTER, LOW);
+  
 // HTU21D
 // The htu21d device reports its values of temp and humi as floats.
 //
@@ -196,7 +197,7 @@ void loop() {
 		{
 			float tempC = sensors.getTempC(tempDeviceAddress);
 			msgCode.address = OWN_ADDRESS;
-			msgCode.channel = i+2;				// HTU21 is 0, BMP085=1, other sensors start at 2
+			msgCode.channel = i+UNIT_OFFSET;	// When present HTU21 is 0, BMP085=1, other sensors start at 2
 			msgCode.humi = 0;
 			msgCode.temp = (unsigned int) (tempC * 128) + 6400; 
 			msgCode.wcode = 0x6;				// Weather code is standard temp/humi

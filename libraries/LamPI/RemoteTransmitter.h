@@ -8,7 +8,6 @@
 #define RemoteTransmitter_h
 
 #include <Arduino.h>
-#include "LamPI.h"
 
 /**
 * RemoteTransmitter provides a generic class for simulation of common RF remote controls, like the 'Klik aan Klik uit'-system

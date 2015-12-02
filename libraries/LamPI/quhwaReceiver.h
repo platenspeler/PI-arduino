@@ -9,7 +9,6 @@
 #define quhwaReceiver_h
 
 #include <Arduino.h>
-#include "LamPI.h"
 
 struct quhwaCode {
 	unsigned short period;

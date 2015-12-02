@@ -6,25 +6,25 @@
 
 #ifndef wt440Receiver_h
 #define wt440Receiver_h
+#define STATISTICS 0
 
 #include <Arduino.h>
-#include "LamPI.h"
 
 struct wt440Code {
-#ifdef STATISTICS
-	short min1Period;			// Statistics!
-	short max1Period;
-	short min2Period;
-	short max2Period;
+#if STATISTICS==1
+	int16_t min1Period;			// Statistics!
+	int16_t max1Period;
+	int16_t min2Period;
+	int16_t max2Period;
 #endif
 	//unsigned int period;		// Detected duration in microseconds of 1T in the received signal
-	byte sync;					// 4 bits 
-	byte address;				// 4 bits Address (house code) of received code. 
-	byte channel;				// 2 bits Channel
-	byte wconst;				// 3 bits
-	short temperature;			//14 bits temperature (encoded)
-	byte humidity;				// 8 bits humidity
-	byte par;					// 1 bit (Xor must be 0)
+	uint8_t sync;					// 4 bits 
+	uint8_t address;				// 4 bits Address (house code) of received code. 
+	uint8_t channel;				// 2 bits Channel
+	uint8_t wconst;					// 3 bits
+	int16_t temperature;			//14 bits temperature (encoded)
+	uint8_t humidity;				// 8 bits humidity
+	uint8_t par;					// 1 bit (Xor must be 0)
 };
 
 typedef void (*wt440ReceiverCallBack)(wt440Code);

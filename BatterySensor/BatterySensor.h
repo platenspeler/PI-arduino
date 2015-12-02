@@ -1,13 +1,14 @@
 //
 // Author: Maarten Westenberg
 // Version: 1.7.3
-// Date: 2015-11-06
+// Date: 2015-11-13
 //
 
 #define BAUDRATE 57600
 
 // What is the Epic address that we should use for this Sensor
 #define OWN_ADDRESS 14
+#define UNIT_OFFSET 2
 
 // If you enable this setting, in debug mode all kind off
 // min/max timers will be displayed
@@ -25,5 +26,4 @@
 #define S_HTU21D 0
 #define S_BH1750 0
 #define S_PIR 0
-#define S_BATTERY 1
 #define S_BATTERY 1

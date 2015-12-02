@@ -9,7 +9,6 @@
 #define KakuTransmitter_h
 
 #include <Arduino.h>
-#include "LamPI.h"
 
 /**
 * KakuTransmitter provides a generic class for simulation of common RF remote controls, like the A-series

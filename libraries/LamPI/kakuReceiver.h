@@ -10,7 +10,6 @@
 #define kakuReceiver_h
 
 #include <Arduino.h>
-#include "LamPI.h"
 
 struct KakuCode {
 	enum SwitchType {

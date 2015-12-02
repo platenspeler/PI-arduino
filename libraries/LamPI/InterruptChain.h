@@ -10,7 +10,6 @@
 #define InterruptChain_h
 
 #include <Arduino.h>
-#include "LamPI.h"
 
 // Arduino Mega has 6 interrupts. For smaller Arduinos and / or to save a few bytes memory you can lower it to 2 or even 1. Don't go higher than 6 tho.
 #define MAX_INTERRUPTS 6

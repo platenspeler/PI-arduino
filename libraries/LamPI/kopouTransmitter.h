@@ -8,7 +8,6 @@
 #define Kopou_h
 
 #include "Arduino.h"
-#include "LamPI.h"
 
 class Kopou
 {

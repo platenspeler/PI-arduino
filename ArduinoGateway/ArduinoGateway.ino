@@ -31,13 +31,15 @@
 // Command "> 111 0 4" will output the version of the Gateway software
 #define VERSION " ! V. 1.7.4, 151104"
 
+#include "ArduinoGateway.h"
+
 // General Include
 //
 #include <Arduino.h>
 #include <Wire.h>
 #include "LamPI.h"				// Shared Definitions, such as PIN definitions
 #include <Streaming.h>          //http://arduiniana.org/libraries/streaming/
-#include "ArduinoGateway.h"		// Transceiver specific definitions
+
 
 // Transmitters Include
 // Be careful not to include transmitters that initialize structures in their .h file
@@ -67,21 +69,25 @@
 // Sensors Include
 //
 #if S_DALLAS==1
-# include "OneWire.h"
-# include "DallasTemperature.h"
+#include <OneWire.h>
+#include <DallasTemperature.h>
 #endif
+
 #if S_HTU21D==1
-# include "HTU21D.h"
+#include <HTU21D.h>
 #endif
+
 #if S_BMP085==1
-# include "bmp085.h"
+#include <bmp085.h>
 #endif
+
 #if S_BH1750==1
-# include "BH1750FVI.h"
+#include <BH1750FVI.h>
 #endif
+
 #if S_DS3231==1
-# include "DS3232RTC.h"     //http://github.com/JChristensen/DS3232RTC
-# include <Time.h>          //http://playground.arduino.cc/Code/Time
+#include <Time.h>          //http://playground.arduino.cc/Code/Time
+#include "DS3232RTC.h"		//http://github.com/JChristensen/DS3232RTC
 #endif
 
 unsigned long time;			// fill up with millis();
@@ -122,7 +128,7 @@ void setup() {
 	Serial.begin(BAUDRATE);			// As fast as possible for USB bus, defined in Transeiver433.h
 	msgCnt = 0;
 	readCnt = 0;
-	debug = 0;
+	debug = DEBUG;
 	codecs = 0;
 
 #if A_MEGA==1
@@ -164,7 +170,7 @@ void setup() {
 	auriolReceiver::init(-1, 2, showAuriolCode);
 #endif
 
-  // Change interrupt mode to CHANGE (on flanks)
+  // Change interrupt mode to CHANGE (on flanks). First argument is interrupt number
   InterruptChain::setMode(0, CHANGE);
   
   // Define the interrupt chain
@@ -174,19 +180,19 @@ void setup() {
   //
 
 #if S_AURIOL==1
-	InterruptChain::addInterruptCallback(0, auriolReceiver::interruptHandler); onCodec(AURIOL);
+	InterruptChain::addInterruptCallback(0, auriolReceiver::interruptHandler);	onCodec(AURIOL);
 #endif
-	InterruptChain::addInterruptCallback(0, RemoteReceiver::interruptHandler); onCodec(ACTION);
-	InterruptChain::addInterruptCallback(0, KakuReceiver::interruptHandler);   onCodec(KAKU);
-	InterruptChain::addInterruptCallback(0, livoloReceiver::interruptHandler); onCodec(LIVOLO);
+	InterruptChain::addInterruptCallback(0, RemoteReceiver::interruptHandler);	onCodec(ACTION);
+	InterruptChain::addInterruptCallback(0, KakuReceiver::interruptHandler);	onCodec(KAKU);
+	InterruptChain::addInterruptCallback(0, livoloReceiver::interruptHandler);	onCodec(LIVOLO);
 #if R_KOPOU==1
-	InterruptChain::addInterruptCallback(0, kopouReceiver::interruptHandler);	 onCodec(KOPOU);
+	InterruptChain::addInterruptCallback(0, kopouReceiver::interruptHandler);	onCodec(KOPOU);
 #endif
 #if R_QUHWA==1
-	InterruptChain::addInterruptCallback(0, quhwaReceiver::interruptHandler);	 onCodec(QUHWA);
+	InterruptChain::addInterruptCallback(0, quhwaReceiver::interruptHandler);	onCodec(QUHWA);
 #endif
 #if S_WT440==1
-	InterruptChain::addInterruptCallback(0, wt440Receiver::interruptHandler);  onCodec(WT440);
+	InterruptChain::addInterruptCallback(0, wt440Receiver::interruptHandler);	onCodec(WT440);
 #endif
 
 	time = millis();
@@ -219,6 +225,10 @@ void setup() {
 #endif
 #if A_MEGA==1
 	printCodecs();
+	if (debug==1) {
+		Serial.print(F("Pin 2 is interrupt: "));
+		Serial.println(digitalPinToInterrupt(2));
+	}
 #endif
 }
 
@@ -226,7 +236,9 @@ void setup() {
 //
 void loop() {
   char * pch;
-
+  // Must make sure digital transmitter pin is low when not used
+  digitalWrite(S_TRANSMITTER, LOW);
+  
   while (Serial.available()) {
     InterruptChain::disable(0);					// Set interrupts off  
 	readChar = Serial.read();					// Read the requested byte from serial

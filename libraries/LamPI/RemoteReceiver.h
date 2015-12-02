@@ -8,7 +8,6 @@
 #define RemoteReceiver_h
 
 #include <Arduino.h>
-#include "LamPI.h"
 
 typedef void (*RemoteReceiverCallBack)(unsigned long, unsigned int);
 
@@ -71,7 +70,7 @@ class RemoteReceiver {
 		* @param waitMillis number of milliseconds to monitor for signal.
 		* @return boolean If after waitMillis no signal was being processed, returns false. If before expiration a signal was being processed, returns true.
 		*/
-		static boolean isReceiving(int waitMillis = 150);
+		static boolean isReceiving(int waitMillis = 120);
 
 		static void interruptHandler();
 

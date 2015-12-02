@@ -33,7 +33,7 @@ void InterruptChain::addInterruptCallback(byte interruptNr, InterruptCallback ca
 
 // Delete an interrupt from the interrupt chain.
 // Parameter is the CODEC number
-// XXX under construction
+// XXX under construction, not production ready
 void InterruptChain::delInterruptCallback(byte interruptNr, InterruptCallback callback) {
   InterruptChainLink *prevLink = chain[interruptNr]; // Note: the chain-array is NULL initialized, so the first time prevLink is indeed NULL
   
