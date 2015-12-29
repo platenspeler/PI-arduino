@@ -1,8 +1,8 @@
 // --------------------------------------------------------------------
 // LamPI specific definitions that apply to ALL Library functions
 // Author: Maarten Westenberg
-// Date: Oct 31, 2015
-// Version 1.7.3
+// Date: Dec 01, 2015
+// Version 1.7.6
 //
 // --------------------------------------------------------------------
 
@@ -41,7 +41,7 @@
 // but since pin 10 is used by RadioHead as well, switched to pin 7!!!
 // PIN	
 //		 2: Receiver pin for the 433MHz receivers
-//		 3: <free> SHT22?
+//		 3: <free> DHT11/DHT21/DHT22?
 //		 4: The SDA pin of the I2C bus
 //		 5: The SCL clock pin of the I2c bus
 //		 6: Pin for detecting PIR motion

@@ -9,7 +9,7 @@
 
 #include <Arduino.h>
 
-typedef void (*RemoteReceiverCallBack)(unsigned long, unsigned int);
+typedef void (*RemoteReceiverCallBack)(uint32_t, unsigned int);
 
 /**
 * See RemoteSwitch for introduction.

@@ -6,17 +6,10 @@
 
 #ifndef wt440Receiver_h
 #define wt440Receiver_h
-#define STATISTICS 0
 
 #include <Arduino.h>
 
 struct wt440Code {
-#if STATISTICS==1
-	int16_t min1Period;			// Statistics!
-	int16_t max1Period;
-	int16_t min2Period;
-	int16_t max2Period;
-#endif
 	//unsigned int period;		// Detected duration in microseconds of 1T in the received signal
 	uint8_t sync;					// 4 bits 
 	uint8_t address;				// 4 bits Address (house code) of received code. 
@@ -25,6 +18,12 @@ struct wt440Code {
 	int16_t temperature;			//14 bits temperature (encoded)
 	uint8_t humidity;				// 8 bits humidity
 	uint8_t par;					// 1 bit (Xor must be 0)
+#if STATISTICS==1
+	int16_t min1Period;			// Statistics!
+	int16_t max1Period;
+	int16_t min2Period;
+	int16_t max2Period;
+#endif
 };
 
 typedef void (*wt440ReceiverCallBack)(wt440Code);

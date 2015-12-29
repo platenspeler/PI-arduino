@@ -6,7 +6,6 @@
  */
 
 #include "RemoteReceiver.h"
-#define STATISTICS 0
 
 /************
 * RemoteReceiver
@@ -53,8 +52,8 @@ void RemoteReceiver::interruptHandler() {
 
 	static unsigned int period;				// Calculated duration of 1 period
 	static byte receivedBit;				// Contains "bit" currently receiving
-	static unsigned long receivedCode;		// Contains received code
-	static unsigned long previousCode;		// Contains previous received code
+	static uint32_t receivedCode;			// Contains received code
+	static uint32_t previousCode;			// Contains previous received code
 	static byte repeats = 0;				// The number of times the an identical code is received in a row.
 	static unsigned long edgeTimeStamp[3] = {0, };	// Timestamp of edges
 	static unsigned int min1Period, max1Period, min3Period, max3Period;
@@ -98,13 +97,7 @@ void RemoteReceiver::interruptHandler() {
 		}
 	} else if (_state<48) { // Decoding message
 		receivedBit <<= 1;
-#if STATISTICS==1
-		if (_state > 4) {
-			Serial.print(_state);
-			Serial.print(":");
-			Serial.println( duration );
-		}		
-#endif
+
 		// bit part durations can ONLY be 1 or 3 periods.
 		if (duration<=max1Period) {
 			receivedBit &= B1110; // Clear LSB of receivedBit

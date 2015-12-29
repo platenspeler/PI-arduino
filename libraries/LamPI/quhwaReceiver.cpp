@@ -177,10 +177,10 @@ void quhwaReceiver::interruptHandler() {
 	// OK, the complete address should be in
 	if(_state == 35) {
 		
-		Serial.print("Address: ");
-		Serial.println (receivedCode.address, BIN);
-		Serial.print("Unit   : ");
-		Serial.println (receivedCode.unit, BIN);		
+		//Serial.print("Address: ");
+		//Serial.println (receivedCode.address, BIN);
+		//Serial.print("Unit   : ");
+		//Serial.println (receivedCode.unit, BIN);		
 		
 		// a valid signal was found!
 		if (

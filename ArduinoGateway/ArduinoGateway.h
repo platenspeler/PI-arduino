@@ -21,7 +21,7 @@
 // set A_MEGA to 1, also set all other devices and sensors below to 1.
 // However be careful with the amount of receivers (R_ ) to enable as parsing
 // too many protocols will slow down interrupt handling and may provide unrielable results
-#define A_MEGA 1
+#define A_MEGA 0
 
 // Enable Receivers of handsets. 
 // If you set to 0, the receiver functions will NOT be compiled and included.
@@ -47,7 +47,7 @@
 #define S_DALLAS 1      //Temperature, pin 7 used for DALLAS
 #define S_BMP085 1      //Airpressure_and_temperature I2C sensor
 #define S_HTU21D 1      //Temperature_and_Humidity I2C sensor
-#define S_BH1750 1      //Luminescense I2C sensor
+#define S_BH1750 0      //Luminescense I2C sensor
 #define S_BATTERY 0     //Internal voltage reference pin A0
 #define S_DS3231 0      //RTC I2C sensor      
 #define S_PIR 0         //PIR sensor connected to pin 6

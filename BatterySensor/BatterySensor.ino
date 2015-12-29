@@ -17,8 +17,8 @@
 // Sensors (Set in .h file)
 //
 #if S_DALLAS==1
-# include "OneWire.h"
-# include "DallasTemperature.h"
+#include "OneWire.h"
+#include "DallasTemperature.h"
   OneWire oneWire(ONE_WIRE_BUS);
   // Pass our oneWire reference to Dallas Temperature. 
   DallasTemperature sensors(&oneWire);
@@ -26,12 +26,12 @@
 #endif
 
 #if S_HTU21D==1
-# include <HTU21D.h>
+#include <HTU21D.h>
   HTU21D myHumidity;		// Init Sensor(s)
 #endif
 
 #if S_BMP085==1
-# include <bmp085.h>
+#include <bmp085.h>
   BMP085 bmp085;
 #endif
 

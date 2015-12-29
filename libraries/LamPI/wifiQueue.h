@@ -1,5 +1,5 @@
 /*
- * IntereruptChain library v1.7.5 (151129)
+ * WifiQueue library v1.7.5 (151129)
  *
  * Copyright 2015-2013 by M. Westenberg (mw12554@hotmail.com)
  *
@@ -19,10 +19,11 @@ typedef void (*QueueCallback)();
 
 // We need to use this structure for both sensors and devices.
 // As a result we'll need to double up some felds
+// without enlarging memory usage.
 struct queueItem {
 		union { uint32_t address; uint32_t gaddr; };
 		union { uint8_t channel; uint8_t uaddr; };		// channel is used with sensors, uaddr for devices
-		union { float value; char val[4]; }	;			// val can be "off", "on", 0-15
+		union { float value; char val[4]; };			// val can be "off", "on", 0-15
 		char action[8];									// both sensors and device messages have action 
 		char type[8];									// and type;
 		union { char brand[8]; char cmd[8]; };

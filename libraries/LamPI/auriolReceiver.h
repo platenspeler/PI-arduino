@@ -13,13 +13,6 @@
 #include <Arduino.h>
 
 struct auriolCode {
-#if STATISTICS==1
-	short min1Period;			// Statistics!
-	short max1Period;
-	short min2Period;
-	short max2Period;
-#endif
-
 	unsigned long address;		// 8 bits Address (house code) of received code. 
 	int temperature;			//12 bits temperature (times 0.1) degrees celcius
 	int humidity;				// Must be 0, not used by this Auriol
@@ -27,6 +20,12 @@ struct auriolCode {
 	byte n1;					// 4 Various bits
 	byte n2;					// 4+3 bits 24-27 and 28-30
 	byte csum;					// Last bit is CRC
+#if STATISTICS==1
+	short min1Period;			// Statistics!
+	short max1Period;
+	short min2Period;
+	short max2Period;
+#endif
 };
 
 typedef void (*auriolReceiverCallBack)(auriolCode);

@@ -4,10 +4,10 @@
 // Date: 2015-11-13
 //
 
-#define BAUDRATE 57600
+#define BAUDRATE 115200
 
 // What is the Epic address that we should use for this Sensor
-#define OWN_ADDRESS 14
+#define OWN_ADDRESS 5
 #define UNIT_OFFSET 2
 
 // If you enable this setting, in debug mode all kind off

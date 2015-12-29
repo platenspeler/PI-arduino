@@ -444,8 +444,8 @@ void parseCmd(char *readLine)
 	Serial.println(F("! ERR: syntax"));
 	return;
   }
-  pch = strtok (pch, " ,."); cnt = atoi(pch);
-  pch = strtok (NULL, " ,."); cmd = atoi(pch);
+  pch = strtok(pch, " ,."); cnt = atoi(pch);
+  pch = strtok(NULL, " ,."); cmd = atoi(pch);
 
   if (cnt)
   switch(cmd) {
@@ -531,6 +531,10 @@ void parseCmd(char *readLine)
 // --------------------------------------------------------------------------------
 // Do parsing of Kaku specific command
 // print back to caller the received code
+// There is a difference for switches and dimmers. Switches do not need dim level 1 (FdP0)
+// but the 1 valuw for switches F1. As we cannot make that difference in the 
+// Arduino code we also support values "off" and "on" that work for switches as well
+// as dimmers (last value).
 //
 void parseKaku(char *pch)
 {
@@ -543,13 +547,16 @@ void parseKaku(char *pch)
   pch = strtok (NULL, " ,."); level = atoi(pch);
 
   if (pch[0] == 'o') { // pch == 'on' as sent by PI-arduino
-	transmitter.sendUnit(group, unit, true);
+	if (pch[1] == 'n') {
+		transmitter.sendUnit(group, unit, true);				// "on"
+	}
+	else transmitter.sendUnit(group, unit, false);				// "off" (must be probably)
   }
-  else if (level == 0) {
+  else if (level == 0) {										// value 0 is off for dim and switch
     transmitter.sendUnit(group, unit, false);
   } 
   else if (level >= 1 && level <= 15) {
-    transmitter.sendDim(group, unit, level);
+    transmitter.sendDim(group, unit, level);					// 1 - 15
   } 
   else {
     Serial.println(F("! ERROR dim not between 0 and 15!"));
@@ -946,7 +953,8 @@ void showRemoteCode(unsigned long receivedCode, unsigned int period) {
 	Serial.print(level);
 
 	if (debug >= 1) {
-		Serial.print(F(" ! Remote ")); 
+		Serial.print(F(" ! Remote:: period: ")); 
+		Serial.print(period); 
 #if STATISTICS==1
 		Serial.print(F(", P: ")); Serial.print(period);
 #endif	 

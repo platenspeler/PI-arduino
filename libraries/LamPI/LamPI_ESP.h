@@ -1,9 +1,9 @@
-// --------------------------------------------------------------------
+// -------------------------------------------------------------------------
 // LamPI specific definitions that apply to ALL Library functions
 // Author: Maarten Westenberg (mw12554@hotmail.com)
-// Date: Nov 29, 2015
-// Version 1.7.5
-// --------------------------------------------------------------------
+// Date: Dec 23, 2015
+// Version 1.7.7
+// -------------------------------------------------------------------------
 
 // =========================================================================
 // You may set different pins for digital and analog pins depending on your own 
@@ -16,20 +16,20 @@
 // Which Digital Arduino Pins are used for what
 // GPIO	numbers are pin numbers and interrupt numbers in IDE
 
-#define A_RECEIVER 0            // 
+#define A_RECEIVER 2            // used GPIO2/D4 for 100
 #define A_TRANSMITTER 16        // GPIO16
 #define A_SDA 4                 // GPIO4 is the default value
 #define A_SCL 5                 // GPIO5 is the default value
 #define A_PIR X
-#define A_SHT22 X               // Maybe share with PIR pin?
+#define A_DHT X             	// Maybe share with PIR pin?
 #define A_ONE_WIRE 12         	// GPIO2 
-
+#define A_LED 1
 
 
 // ==========================================================================
 // General definitions used in all library programs
 // Do not change below this line
-// In future, this might become an array of boolenas to gold all the enables devices...
+// In future, this might become an array of boolens to hold all the enabled devices...
 // Devices Define, for the array that is shared between Arduino and Raspberry
 // it enables the Raspberry to see which functions are enabled by THIS connected Arduino
 // Encoding type for switches/dimmers:
@@ -52,12 +52,13 @@
 #define CRESTA 21
 // Until 24
 
-// COdecs
+// Codecs
 #define C_DALLAS 24
 #define C_BMP085 25	// Same as BMP180
 #define C_HTU21D 26	// Same as 
-#define C_DS3231 27
+#define C_DS3231 27	// Real-Time clock
 #define C_BH1750 28	// Luminescence
 #define C_BATTERY 29
 #define C_PIR 30
+#define C_DHT 31	// DHT11,21,22 temperature/humidity Sensors
 // Geo/Compass
